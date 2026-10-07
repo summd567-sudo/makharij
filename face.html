@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>مخارج الحروف العربية</title>
+<title>مخارج الحروف على الوجه</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
 <style>
@@ -44,7 +44,22 @@ header p{margin:6px 0 0;color:var(--muted);max-width:66ch}
 .key:focus-visible,.controls button:focus-visible,.seg:focus-visible{outline:2px solid var(--air);outline-offset:2px}
 /* player */
 .screen{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.stage{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);min-height:420px}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}
+.faceview{padding:14px;display:flex;align-items:center;justify-content:center}
+.faceview svg{width:100%;max-width:340px;height:auto;display:block}
+.stage .caption{grid-column:1/-1;border-top:1px solid var(--line)}
+.eye-g{animation:blink 5s infinite;transform-origin:center;transform-box:fill-box}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+#f-mark{fill:none;stroke:var(--contact);stroke-width:2.5;opacity:0}
+#f-mark.on{animation:ring 1.4s ease-out infinite}
+#f-voice path{fill:none;stroke:var(--air);stroke-width:2.5;stroke-linecap:round;opacity:0}
+#f-voice.on path{animation:vw .45s ease-in-out infinite alternate}
+@keyframes vw{from{opacity:.15}to{opacity:1}}
+.glow{opacity:0;transition:opacity .4s}
+.glow.on{opacity:1}
+#f-note{font-family:var(--f-body);font-size:12px;font-weight:600;fill:var(--muted);opacity:0;transition:opacity .4s}
+#f-note.on{opacity:1}
+.muted a{color:var(--air)}
 .diagram{padding:14px;border-left:1px solid var(--line);display:flex;align-items:center;position:relative}
 .diagram svg{width:100%;height:auto;display:block}
 .big{position:absolute;top:10px;right:16px;font-family:var(--f-display);font-size:64px;line-height:1;color:var(--contact)}
@@ -116,13 +131,15 @@ h2.sec{font-family:var(--f-display);font-size:30px;margin:12px 0 0}
 .muted{color:var(--muted);font-size:14px}
 @media (max-width:760px){
   .stage{grid-template-columns:1fr}
-  .diagram{border-left:0;border-bottom:1px solid var(--line)}
+  .diagram{border-left:0;border-top:1px solid var(--line)}
+  .faceview svg{max-width:280px}
   .card{grid-template-columns:1fr}
   .caption h2{font-size:26px}
   .big{font-size:48px}
 }
 @media (prefers-reduced-motion:reduce){
-  #air path.on,#folds.on line,#burst.on .ring{animation:none}
+  #air path.on,#folds.on line,#burst.on .ring,.eye-g,#f-mark.on,#f-voice.on path{animation:none}
+  #f-mark.on,#f-voice.on path{opacity:.9}
   #burst.on .ring:first-child{opacity:.8;r:14}
   .fade{animation:none}
 }
@@ -137,19 +154,65 @@ h2.sec{font-family:var(--f-display);font-size:30px;margin:12px 0 0}
       <button type="button" data-t="dark">داكن</button>
       <button type="button" data-t="auto">تلقائي</button>
     </div>
-    <h1>مخارج الحروف العربية</h1>
-    <p>درس مرئي متحرك لكل حرف: أين يخرج، وكيف تتحرك أعضاء النطق خطوة بخطوة، وصفاته، وأمثلة من القرآن، والأخطاء الشائعة. اختر حرفًا، أو اترك التشغيل المتواصل يمرّ على الحروف كلها بترتيب المخارج.</p>
-    <p style="margin:0;font-size:14px"><a href="face.html" style="color:var(--air)">النسخة على وجه إنسان</a></p>
+    <div class="theme" id="person" role="group" aria-label="الشخص">
+      <button type="button" data-p="t">المعلم</button>
+      <button type="button" data-p="s">الطالب</button>
+    </div>
+    <h1>مخارج الحروف على الوجه</h1>
+    <p>نفس الدرس على وجه إنسان: ترى من الأمام حركة الفك والشفتين والأسنان وطرف اللسان، وترى في المقطع الجانبي ما يحدث داخل الفم والحلق. اختر الشخص والحرف، أو اترك التشغيل المتواصل يمرّ على الحروف كلها.</p>
+    <p class="muted"><a href="index.html">النسخة بالمقطع الجانبي فقط</a></p>
   </header>
 
   <nav class="picker" id="picker" aria-label="اختيار الحرف"></nav>
 
   <div class="screen">
     <div class="stage">
+      <div class="faceview">
+        <svg id="face" viewBox="0 0 300 372" role="img" aria-label="وجه إنسان من الأمام يوضح حركة الفك والشفتين واللسان">
+          <defs>
+            <clipPath id="mclip"><ellipse id="mclip-e" cx="150" cy="236" rx="29" ry="8"/></clipPath>
+            <radialGradient id="glowg"><stop offset="0" stop-color="var(--hl)" stop-opacity=".95"/><stop offset="1" stop-color="var(--hl)" stop-opacity="0"/></radialGradient>
+          </defs>
+          <path d="M112 258 L106 372 L194 372 L188 258 Z" fill="var(--skin)" stroke="var(--edge)" stroke-width="1.5"/>
+          <path d="M106 372 C120 352 180 352 194 372 Z" fill="var(--edge)" opacity=".25"/>
+          <ellipse class="glow" id="f-throat" cx="150" cy="320" rx="38" ry="22" fill="url(#glowg)"/>
+          <g id="f-voice"><path d="M126 312 q-8 9 0 18"/><path d="M116 308 q-10 13 0 26"/><path d="M174 312 q8 9 0 18"/><path d="M184 308 q10 13 0 26"/></g>
+          <ellipse cx="60" cy="172" rx="12" ry="22" fill="var(--skin)" stroke="var(--edge)" stroke-width="1.5"/>
+          <ellipse cx="240" cy="172" rx="12" ry="22" fill="var(--skin)" stroke="var(--edge)" stroke-width="1.5"/>
+          <path id="f-head" fill="var(--skin)" stroke="var(--edge)" stroke-width="1.5"/>
+          <path id="f-beard" fill="var(--hair)"/>
+          <path d="M60 160 C52 82 100 34 150 34 C200 34 248 82 240 160 C236 118 214 90 150 88 C86 90 64 118 60 160 Z" fill="var(--hair)"/>
+          <path d="M96 130 Q112 120 130 128" fill="none" stroke="var(--hair)" stroke-width="4" stroke-linecap="round"/>
+          <path d="M170 128 Q188 120 204 130" fill="none" stroke="var(--hair)" stroke-width="4" stroke-linecap="round"/>
+          <g class="eye-g"><path d="M98 150 Q113 139 128 150 Q113 159 98 150 Z" fill="#FBFAF6" stroke="var(--edge)"/><circle cx="113" cy="150" r="5" fill="#3B2A1E"/><circle cx="114.5" cy="148.5" r="1.4" fill="#fff"/></g>
+          <g class="eye-g"><path d="M172 150 Q187 139 202 150 Q187 159 172 150 Z" fill="#FBFAF6" stroke="var(--edge)"/><circle cx="187" cy="150" r="5" fill="#3B2A1E"/><circle cx="188.5" cy="148.5" r="1.4" fill="#fff"/></g>
+          <ellipse class="glow" id="f-nose" cx="150" cy="192" rx="30" ry="18" fill="url(#glowg)"/>
+          <path d="M150 150 C147 170 141 186 140 194 C142 202 158 202 160 194 C159 186 153 170 150 150" fill="none" stroke="var(--edge)" stroke-width="1.5"/>
+          <path d="M141 197 q4 3 7 0 M152 197 q3 3 7 0" fill="none" stroke="var(--edge)" stroke-width="1.5"/>
+          <ellipse id="m-cav" cx="150" cy="236" rx="29" ry="8" fill="#3A1418"/>
+          <g clip-path="url(#mclip)">
+            <ellipse id="m-body" fill="#D9707C"/>
+            <rect id="m-ut" fill="#FBFAF5"/>
+            <rect id="m-lt" fill="#F3F0E6"/>
+            <ellipse id="m-tip" fill="#E47F8B" stroke="#A84A57" stroke-width=".8"/>
+          </g>
+          <path id="f-mous" fill="var(--hair)"/>
+          <path id="m-ul" fill="var(--lip)" stroke="var(--edge)" stroke-width=".8"/>
+          <path id="m-ll" fill="var(--lip)" stroke="var(--edge)" stroke-width=".8"/>
+          <circle id="f-mark" r="4" cx="150" cy="236"/>
+          <text id="f-note" x="150" y="22" text-anchor="middle">مخرج هذا الحرف داخل الفم: تابعه في المقطع الجانبي</text>
+        </svg>
+      </div>
       <div class="diagram">
         <div class="big" id="big" aria-hidden="true"></div>
-        <svg viewBox="-60 0 530 372" role="img" aria-label="مقطع جانبي للرأس يوضح الحلق واللسان والشفتين">
+        <svg id="side" viewBox="-60 0 530 372" role="img" aria-label="مقطع جانبي للرأس يوضح الحلق واللسان والشفتين">
           <path d="M150 10 C100 12 70 40 66 80 L40 112 L66 124 C62 130 62 136 66 140 L72 176 C62 196 66 225 90 240 C120 252 160 250 185 262 L200 370 L312 370 C318 300 345 240 345 160 C345 60 260 5 150 10 Z" fill="var(--tissue)" stroke="var(--tissue-edge)" stroke-width="2"/>
+          <path d="M68 74 C74 30 120 8 170 8 C260 8 345 60 345 150 L341 176 C334 112 302 72 250 58 C190 44 122 48 92 66 Z" fill="var(--hair,#2A2019)"/>
+          <ellipse cx="302" cy="140" rx="13" ry="24" fill="var(--tissue)" stroke="var(--tissue-edge)" stroke-width="1.5"/>
+          <path d="M298 126 q10 14 0 28" fill="none" stroke="var(--tissue-edge)" stroke-width="1.2"/>
+          <path d="M74 70 Q90 62 106 68" fill="none" stroke="var(--hair,#2A2019)" stroke-width="3.5" stroke-linecap="round"/>
+          <path d="M76 84 Q88 76 100 84 Q88 90 76 84 Z" fill="#FBFAF6" stroke="var(--tissue-edge)"/>
+          <circle cx="81" cy="84" r="3" fill="#3B2A1E"/>
           <path d="M72 120 C120 108 200 100 262 116 L268 362 L238 362 L238 300 C200 262 150 236 100 228 C80 222 70 200 72 172 L86 158 L86 150 Z" fill="var(--surface)" opacity=".85"/>
           <path class="zone" id="z-jawf" d="M250 340 L250 170 C240 150 200 130 150 132 C120 134 100 145 92 160 L92 180 C120 186 180 180 230 200 L238 300 Z"/>
           <path class="zone" id="z-nose" d="M60 116 C120 106 200 100 258 118 L254 130 C200 116 130 116 86 138 Z"/>
@@ -474,6 +537,71 @@ function load(n,user){
   card(L[li]); render();
   if(user){try{location.hash='l'+li;}catch(e){}}
 }
+// ---- front view of a person ----
+var PERS={t:{skin:'#E5B48B',edge:'#9C6845',hair:'#2A2019',lip:'#B4625C',beard:1},s:{skin:'#F1CBA5',edge:'#B5835E',hair:'#4A3221',lip:'#C8736A',beard:0}};
+var MODE={lam:'up',nun:'up',ra:'up',ta:'up',tta:'up',tha:'out',zha:'out',sin:'down',sad:'down',dad:'wide',mid:'mid',shin:'mid',ya:'mid'};
+function att(id,o){var e=$(id); for(var k in o)e.setAttribute(k,o[k]);}
+function ftarget(x,st){
+  var tg=st.release?'rest':x.tg, lips=(st.release&&x.lips==='closed')?'rest':x.lips, mode=MODE[tg]||'low';
+  var g=lips==='closed'?0:lips==='open'?30:lips==='round'?12:lips==='fa'?12:mode==='down'?6:tg==='shin'?8:mode==='out'?14:16;
+  var w=lips==='round'?30:lips==='closed'?62:lips==='open'?66:(mode==='down'||tg==='shin')?70:64;
+  var c=236+(g-10)*.25, h=g/2, th=Math.min(6,h*.7);
+  var t={w:w,h:h,c:c,th:th,ulY:c-h-(lips==='fa'?3:0),llY:lips==='fa'?c-h+th:c+h,chin:296+(g-10)*.7,
+    bCy:c+h-1,bRx:w*.3,bRy:Math.min(6,h),tCy:c+h-2,tRx:10,tRy:0};
+  if(mode==='up'){t.tCy=c-h+th+5;t.tRy=Math.max(0,Math.min(6,h-1));}
+  if(mode==='out'){t.tCy=c;t.tRx=12;t.tRy=4;}
+  if(mode==='wide'){t.bCy=c;t.bRx=w*.38;t.bRy=Math.max(0,h-2);}
+  if(mode==='mid'){t.bCy=c+1;t.bRx=w*.26;t.bRy=Math.max(0,h-3);}
+  t.mode=mode; t.lips=lips; return t;
+}
+function drawFace(v){
+  var w=v.w,x0=150-w/2,x1=150+w/2,y=v.ulY,z=v.llY,ch=v.chin;
+  att('m-cav',{cx:150,cy:v.c,rx:Math.max(0,w/2-3),ry:Math.max(0,v.h)}); att('mclip-e',{cx:150,cy:v.c,rx:Math.max(0,w/2-3),ry:Math.max(0,v.h)});
+  att('m-body',{cx:150,cy:v.bCy,rx:Math.max(0,v.bRx),ry:Math.max(0,v.bRy)});
+  att('m-tip',{cx:150,cy:v.tCy,rx:Math.max(0,v.tRx),ry:Math.max(0,v.tRy)});
+  var tw=w*.6; att('m-ut',{x:150-tw/2,y:v.c-v.h,width:tw,height:Math.max(0,v.th)}); att('m-lt',{x:150-tw/2,y:v.c+v.h-v.th,width:tw,height:Math.max(0,v.th)});
+  att('m-ul',{d:'M'+x0+' '+y+' Q'+(150-w/4)+' '+(y-12)+' 150 '+(y-7)+' Q'+(150+w/4)+' '+(y-12)+' '+x1+' '+y+' Q150 '+(y+3)+' '+x0+' '+y+' Z'});
+  att('m-ll',{d:'M'+x0+' '+z+' Q150 '+(z-2)+' '+x1+' '+z+' Q'+(150+w/4)+' '+(z+15)+' 150 '+(z+15)+' Q'+(150-w/4)+' '+(z+15)+' '+x0+' '+z+' Z'});
+  att('f-head',{d:'M150 44 C222 44 246 104 242 170 C240 222 214 '+(ch-20)+' 150 '+ch+' C86 '+(ch-20)+' 60 222 58 170 C54 104 78 44 150 44 Z'});
+  att('f-beard',{d:'M64 196 C70 '+(ch-26)+' 108 '+(ch+5)+' 150 '+(ch+7)+' C192 '+(ch+5)+' 230 '+(ch-26)+' 236 196 C226 '+(ch-36)+' 200 '+(z+24)+' 150 '+(z+22)+' C100 '+(z+24)+' 74 '+(ch-36)+' 64 196 Z'});
+  att('f-mous',{d:'M'+(x0-5)+' '+(y-2)+' Q150 '+(y-22)+' '+(x1+5)+' '+(y-2)+' Q150 '+(y-11)+' '+(x0-5)+' '+(y-2)+' Z'});
+}
+var fcur=null, ftw=null;
+function face(x,st){
+  var t=ftarget(x,st);
+  if(!fcur){fcur={};for(var k in t)if(typeof t[k]==='number')fcur[k]=t[k];}
+  var from={},k; for(k in fcur)from[k]=fcur[k];
+  var start=performance.now(), D=reduce?0:650; if(ftw)cancelAnimationFrame(ftw);
+  (function f(now){var q=D?Math.min(1,(now-start)/D):1; q=q<.5?2*q*q:1-Math.pow(-2*q+2,2)/2;
+    for(k in from)fcur[k]=from[k]+(t[k]-from[k])*q; drawFace(fcur); if(q<1)ftw=requestAnimationFrame(f);})(start);
+  var zone=(x.z||[])[0], throatY={near:300,mid:318,deep:338}[zone];
+  $('f-throat').classList.toggle('on',x.g==='halq'||x.g==='jawf');
+  att('f-throat',{cy:x.g==='jawf'?300:(throatY||320)});
+  $('f-nose').classList.toggle('on',!!x.nas);
+  var mk=null;
+  if(!st.release){
+    if(x.g==='shafa')mk=[150,t.c];
+    else if(t.mode==='up')mk=[150,t.c-t.h+t.th+3];
+    else if(t.mode==='out')mk=[150,t.c];
+    else if(t.mode==='down')mk=[150,t.c+t.h-t.th];
+  }
+  if(mk)att('f-mark',{cx:mk[0],cy:mk[1]});
+  $('f-mark').classList.toggle('on',!!mk);
+  $('f-note').classList.toggle('on',x.g==='lisan'&&!mk&&!st.release);
+  $('f-voice').classList.toggle('on',!!st.voice);
+}
+var person='t'; try{person=localStorage.getItem('makharij-person')||'t';}catch(e){}
+function applyPerson(p){
+  person=PERS[p]?p:'t'; var P=PERS[person];
+  ['skin','edge','hair','lip'].forEach(function(k){$('face').style.setProperty('--'+k,P[k]);});
+  $('side').style.setProperty('--hair',P.hair);
+  $('f-beard').style.display=P.beard?'':'none'; $('f-mous').style.display=P.beard?'':'none';
+  document.querySelectorAll('#person button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.p===person));});
+  try{localStorage.setItem('makharij-person',person);}catch(e){}
+}
+document.querySelectorAll('#person button').forEach(function(b){b.onclick=function(){applyPerson(b.dataset.p);};});
+applyPerson(person);
+
 function render(){
   var x=L[li], s=steps[i], st=s.s;
   $('big').textContent=x.k.length>2?'ا و ي':x.k;
@@ -495,6 +623,7 @@ function render(){
   $('e-dad1').classList.toggle('on',x.ins==='dad'); $('e-dad2').classList.toggle('on',x.ins==='dad'); $('e-lam').classList.toggle('on',x.ins==='lam');
   $('air-flow').classList.toggle('on',st.air==='flow'); $('air-block').classList.toggle('on',st.air==='block'); $('air-nose').classList.toggle('on',st.air==='nose');
   $('folds').classList.toggle('on',!!st.voice); $('burst').classList.toggle('on',!!st.burst); $('raise').classList.toggle('on',!!st.raise);
+  face(x,st);
   $('counter').textContent=(li+1)+' / '+L.length;
   elapsed=0; speak();
 }
