@@ -275,7 +275,7 @@ var L=[
 var $=function(id){return document.getElementById(id);};
 var cv=$('cv'), ctx=cv.getContext('2d'), CW=720, CH=1280;
 var off=document.createElement('canvas'); off.width=CW; off.height=CH; var oc=off.getContext('2d');
-var S=1.85, OX=690, OY=233;
+var S=1.85, OX=690, OY=300;
 function toU(c){c.setTransform(-S,0,0,S,OX,OY);}
 function toI(c){c.setTransform(1,0,0,1,0,0);}
 function P(x,y){return [OX-S*x, OY+S*y];}
@@ -335,8 +335,7 @@ function drawScene(x,t,now){
   var sk=ctx.createLinearGradient(40,0,350,0); sk.addColorStop(0,'#E6B990'); sk.addColorStop(.55,'#D6A078'); sk.addColorStop(1,'#B98260');
   ctx.fillStyle=sk; ctx.fill(FACE); ctx.strokeStyle='rgba(140,90,60,.55)'; ctx.lineWidth=1.2; ctx.stroke(FACE);
   var ck=ctx.createRadialGradient(150,170,10,150,170,90); ck.addColorStop(0,'rgba(200,110,90,.18)'); ck.addColorStop(1,'rgba(200,110,90,0)'); ctx.fillStyle=ck; ctx.fill(FACE);
-  ctx.fillStyle=tb; ctx.fill(COLLAR); ctx.strokeStyle='rgba(120,130,140,.35)'; ctx.stroke(COLLAR);
-  // beard
+    // beard
   ctx.fillStyle='rgba(38,29,23,.86)'; ctx.fill(BEARD);
   ctx.strokeStyle='rgba(20,14,10,.55)'; ctx.lineWidth=.7;
   hairs.forEach(function(h){ctx.beginPath();ctx.moveTo(h[0],h[1]);ctx.lineTo(h[0]+h[2],h[1]+h[3]);ctx.stroke();});
@@ -354,7 +353,7 @@ function drawScene(x,t,now){
 
   // cutaway window (offscreen, feathered)
   toI(oc); oc.clearRect(0,0,CW,CH); toU(oc);
-  oc.save(); oc.beginPath(); oc.ellipse(190,210,140,132,0,0,6.283); oc.clip();
+  oc.save(); oc.beginPath(); oc.ellipse(195,212,128,120,0,0,6.283); oc.clip();
   var mg=oc.createRadialGradient(180,200,20,180,200,160); mg.addColorStop(0,'#C9685A'); mg.addColorStop(1,'#9E4A3F'); oc.fillStyle=mg; oc.fillRect(40,70,320,320);
   oc.strokeStyle='rgba(255,210,200,.18)'; oc.lineWidth=1.2;
   for(var m=0;m<14;m++){oc.beginPath();oc.moveTo(110+m*12,250);oc.bezierCurveTo(130+m*12,210,170+m*10,190,200+m*8,150);oc.stroke();}
@@ -375,10 +374,10 @@ function drawScene(x,t,now){
   oc.restore();
   // feather the window edge
   toI(oc); oc.globalCompositeOperation='destination-in';
-  var c0=P(190,210); oc.save(); oc.translate(c0[0],c0[1]); oc.scale(1,132/140);
-  var fg=oc.createRadialGradient(0,0,0,0,0,140*S); fg.addColorStop(0,'rgba(0,0,0,1)'); fg.addColorStop(.74,'rgba(0,0,0,1)'); fg.addColorStop(1,'rgba(0,0,0,0)');
-  oc.fillStyle=fg; oc.beginPath(); oc.arc(0,0,140*S,0,6.283); oc.fill(); oc.restore(); oc.globalCompositeOperation='source-over';
-  toI(ctx); ctx.globalAlpha=.9; ctx.drawImage(off,0,0); ctx.globalAlpha=1;
+  var c0=P(195,212); oc.save(); oc.translate(c0[0],c0[1]); oc.scale(1,120/128);
+  var fg=oc.createRadialGradient(0,0,0,0,0,128*S); fg.addColorStop(0,'rgba(0,0,0,1)'); fg.addColorStop(.74,'rgba(0,0,0,1)'); fg.addColorStop(1,'rgba(0,0,0,0)');
+  oc.fillStyle=fg; oc.beginPath(); oc.arc(0,0,128*S,0,6.283); oc.fill(); oc.restore(); oc.globalCompositeOperation='source-over';
+  toI(ctx); ctx.globalAlpha=.8; ctx.drawImage(off,0,0); ctx.globalAlpha=1;
 
   // lips, moustache, ear on top
   toU(ctx);
@@ -386,6 +385,7 @@ function drawScene(x,t,now){
   ctx.save(); ctx.translate(lp[0],lp[1]); ctx.fillStyle=lg; ctx.fill(ULIP); ctx.restore();
   ctx.save(); ctx.translate(lp[2],lp[3]); ctx.fillStyle=lg; ctx.fill(LLIP); ctx.restore();
   ctx.fillStyle='rgba(38,29,23,.9)'; ctx.fill(MOUS);
+  ctx.fillStyle='#F4F6F8'; ctx.fill(COLLAR); ctx.strokeStyle='rgba(120,130,140,.35)'; ctx.lineWidth=1.2; ctx.stroke(COLLAR);
   var eg=ctx.createRadialGradient(300,140,4,300,140,28); eg.addColorStop(0,'#C88E69'); eg.addColorStop(1,'#B07A58');
   ctx.fillStyle=eg; ctx.beginPath(); ctx.ellipse(302,142,15,27,0,0,6.283); ctx.fill();
   ctx.strokeStyle='rgba(120,70,50,.6)'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(296,124); ctx.bezierCurveTo(310,132,310,154,298,162); ctx.stroke();
@@ -416,7 +416,7 @@ function drawScene(x,t,now){
     // label
     var la=cl((t-1500)/400)*fade;
     ctx.save(); ctx.globalAlpha=la; ctx.direction='rtl'; ctx.textAlign='center'; ctx.font='600 30px "IBM Plex Sans Arabic", sans-serif';
-    var ly=Math.max(300,p[1]-R*1.6-10), lx=Math.min(CW-170,Math.max(170,p[0]));
+    var ly=Math.max(330,p[1]-R*1.6-10), lx=Math.min(CW-170,Math.max(170,p[0]));
     var tw=ctx.measureText(x.mks).width+36; ctx.fillStyle='rgba(19,35,58,.78)'; roundRect(ctx,lx-tw/2,ly-27,tw,52,26); ctx.fill();
     ctx.fillStyle='#FFFFFF'; ctx.fillText(x.mks,lx,ly+10); ctx.restore();
   }
@@ -424,8 +424,8 @@ function drawScene(x,t,now){
   // titles
   ctx.save(); ctx.direction='rtl'; ctx.textAlign='center';
   ctx.globalAlpha=cl(t/300)*fade+(1-fade)*0;
-  ctx.fillStyle='#13233A'; ctx.font='700 112px Amiri, serif'; ctx.fillText(x.k.length>2?'ا و ي':x.k, CW/2, 150);
-  ctx.font='600 34px "IBM Plex Sans Arabic", sans-serif'; ctx.fillStyle='#566377'; ctx.fillText('مخرج '+x.n, CW/2, 205);
+  ctx.fillStyle='#13233A'; ctx.font='700 112px Amiri, serif'; ctx.fillText(x.k.length>2?'ا و ي':x.k, CW/2, 140);
+  ctx.font='600 34px "IBM Plex Sans Arabic", sans-serif'; ctx.fillStyle='#566377'; ctx.fillText('مخرج '+x.n, CW/2, 236);
   var wa=cl((t-2300)/400)*fade, word=exampleWord(x);
   if(wa>0){
     ctx.globalAlpha=wa; var fs=68; ctx.font='700 '+fs+'px Amiri, serif'; while(ctx.measureText(word).width>CW-120&&fs>34){fs-=4;ctx.font='700 '+fs+'px Amiri, serif';}
