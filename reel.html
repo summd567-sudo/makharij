@@ -486,7 +486,9 @@ function record(list,name){
   rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
   rec.onstop=function(){
     var type=rec.mimeType||mime||'video/webm', ext=/mp4/.test(type)?'mp4':'webm';
-    var blob=new Blob(chunks,{type:type}), url=URL.createObjectURL(blob), a=document.createElement('a');
+    var blob=new Blob(chunks,{type:type});
+    if(!blob.size){rec=null; document.querySelectorAll('.btn').forEach(function(b){b.disabled=false;}); status('لم يُسجَّل شيء. أبقِ الصفحة ظاهرة على الشاشة أثناء الحفظ ثم أعد المحاولة.'); return;}
+    var url=URL.createObjectURL(blob), a=document.createElement('a');
     a.href=url; a.download=name+'.'+ext; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function(){URL.revokeObjectURL(url);},60000);
     rec=null; document.querySelectorAll('.btn').forEach(function(b){b.disabled=false;});
