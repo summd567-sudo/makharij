@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مقاطع مخارج الحروف</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: vertical 9:16 "reel" canvas beside the letter picker and recording controls; stacks on phones */
+:root{
+  --bg:#EEF2F5; --surface:#FFFFFF; --ink:#13233A; --muted:#566377; --line:#C9D2DD; --accent:#C2561B; --ok:#0F7F6B;
+  --f-display:"Amiri","Traditional Arabic",serif;
+  --f-body:"IBM Plex Sans Arabic","Segoe UI","Tahoma",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0E151E;--surface:#16212D;--ink:#E5ECF3;--muted:#9AA8B8;--line:#2B3949;--accent:#F08A4B;--ok:#45C9A6;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0E151E;--surface:#16212D;--ink:#E5ECF3;--muted:#9AA8B8;--line:#2B3949;--accent:#F08A4B;--ok:#45C9A6;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.7;direction:rtl;padding-inline:16px;padding-block:24px 56px}
+.wrap{max-width:1080px;margin-inline:auto;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-direction:column;gap:4px}
+header h1{font-family:var(--f-display);font-size:clamp(32px,6vw,50px);line-height:1.2;margin:0;text-wrap:balance}
+header p{margin:0;color:var(--muted);max-width:66ch}
+header a{color:var(--ok)}
+.theme{display:flex;gap:4px;align-self:flex-start;border:1px solid var(--line);border-radius:10px;padding:3px;background:var(--surface)}
+.theme button{font:inherit;font-size:13px;color:var(--muted);background:transparent;border:0;border-radius:7px;padding:4px 12px;cursor:pointer}
+.theme button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.main{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:28px;align-items:start}
+.cv-wrap{background:#dfe5ea;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+canvas{display:block;width:100%;height:auto;aspect-ratio:9/16}
+.side{display:flex;flex-direction:column;gap:18px;min-width:0}
+.grp{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.grp-name{font-size:13px;font-weight:600;color:var(--muted);min-width:4.5em}
+.keys{display:flex;flex-wrap:wrap;gap:6px}
+.key{font-family:var(--f-display);font-size:22px;line-height:1;min-width:42px;height:42px;padding:0 8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;cursor:pointer}
+.key[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;font-size:15px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 14px;cursor:pointer}
+.btn:hover{border-color:var(--ink)}
+.btn.rec{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+button:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
+.status{font-size:14px;color:var(--muted);min-height:1.7em}
+.status b{color:var(--accent)}
+.note{font-size:14px;color:var(--muted);border-inline-start:3px solid var(--line);padding-inline-start:12px;margin:0}
+h2{font-family:var(--f-display);font-size:24px;margin:0}
+@media (max-width:760px){.main{grid-template-columns:1fr}.cv-wrap{max-width:380px;margin-inline:auto;width:100%}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="theme" id="theme" role="group" aria-label="المظهر">
+      <button type="button" data-t="light">فاتح</button>
+      <button type="button" data-t="dark">داكن</button>
+      <button type="button" data-t="auto">تلقائي</button>
+    </div>
+    <h1>مقاطع مخارج الحروف</h1>
+    <p>مقطع عمودي لكل حرف بأسلوب المقاطع القصيرة: قارئ من الجانب، ونافذة شفافة على الفم والحلق، وتوهّج على موضع المخرج. شغّل المقطع هنا، أو احفظه فيديو وأرسله في واتساب أو انشره في الحالة.</p>
+    <p style="font-size:14px"><a href="index.html">الدرس بالمقطع الجانبي</a> · <a href="face.html">الدرس على وجه إنسان</a></p>
+  </header>
+
+  <div class="main">
+    <div class="cv-wrap"><canvas id="cv" width="720" height="1280" aria-label="مقطع متحرك لمخرج الحرف المختار"></canvas></div>
+    <div class="side">
+      <div>
+        <h2>اختر الحرف</h2>
+        <div id="picker" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
+      </div>
+      <div class="row">
+        <button class="btn" id="b-one" type="button">تشغيل الحرف</button>
+        <button class="btn" id="b-all" type="button">تشغيل كل الحروف</button>
+        <button class="btn" id="b-stop" type="button">إيقاف</button>
+      </div>
+      <div class="row">
+        <button class="btn rec" id="r-one" type="button">حفظ فيديو الحرف</button>
+        <button class="btn" id="r-all" type="button">حفظ فيديو كل الحروف (قرابة دقيقتين ونصف)</button>
+      </div>
+      <div class="status" id="status" aria-live="polite"></div>
+      <p class="note">الفيديو صامت، فأضف إليه تلاوة قارئ متقن في أي برنامج تحرير على الجوال قبل نشره. أثناء الحفظ أبقِ هذه الصفحة ظاهرة على الشاشة حتى ينتهي، وإلا توقف التسجيل. الرسم توضيحي مبسَّط وليس تصويرًا لشخص حقيقي.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement, saved='light';
+  try{saved=localStorage.getItem('makharij-theme')||'light';}catch(e){}
+  function apply(t){
+    if(t==='auto')root.removeAttribute('data-theme'); else root.setAttribute('data-theme',t);
+    document.querySelectorAll('#theme button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.t===t));});
+    try{localStorage.setItem('makharij-theme',t);}catch(e){}
+  }
+  document.querySelectorAll('#theme button').forEach(function(b){b.onclick=function(){apply(b.dataset.t);};});
+  apply(saved);
+})();
+(function(){
+var SH={ // tongue: tip, seg1, seg2, root controls
+ rest:[92,196,110,180,150,172,185,168,220,164,246,178,250,210,252,235,244,270],
+ low:[92,198,110,188,150,182,185,178,220,174,246,184,250,214,252,238,244,272],
+ qaf:[92,196,110,180,150,172,185,160,218,138,244,122,250,176,252,235,244,270],
+ kaf:[92,196,114,176,158,146,198,132,224,124,246,150,250,184,252,235,244,270],
+ mid:[92,194,104,168,130,132,165,125,205,122,240,160,250,200,252,235,244,270],
+ shin:[92,194,104,172,130,140,165,134,205,132,240,165,250,202,252,235,244,270],
+ ya:[92,194,104,176,130,148,165,142,205,140,240,170,250,204,252,235,244,270],
+ dad:[94,180,106,150,140,128,182,127,218,128,244,142,250,180,252,235,244,270],
+ lam:[100,146,112,140,140,150,175,158,215,160,246,178,250,210,252,235,244,270],
+ nun:[98,150,110,146,145,158,180,162,215,162,246,178,250,210,252,235,244,270],
+ ra:[103,144,115,140,148,150,182,156,216,158,246,176,250,208,252,235,244,270],
+ ta:[95,150,108,150,145,160,182,162,218,162,246,178,250,210,252,235,244,270],
+ tta:[95,150,110,140,150,128,185,128,218,128,244,140,250,180,252,235,244,270],
+ sin:[92,180,100,166,130,158,170,158,215,162,246,178,250,210,252,235,244,270],
+ sad:[92,180,100,162,140,132,180,130,218,130,244,142,250,180,252,235,244,270],
+ tha:[84,168,98,160,140,162,182,164,218,164,246,178,250,210,252,235,244,270],
+ zha:[84,168,98,156,140,132,182,130,218,130,244,142,250,180,252,235,244,270],
+ ghayn:[92,196,110,180,150,172,185,164,218,150,242,140,250,182,252,235,244,270],
+ phar:[92,196,110,180,150,172,185,168,220,164,246,178,252,206,262,232,254,268]
+};
+var LIPS={rest:[0,0,0,4],open:[0,-2,0,12],closed:[0,3,0,-3],round:[-7,2,-7,0],fa:[0,-3,8,-6]};
+var MEAN={'همس':'جريان النَّفَس عند النطق لضعف الاعتماد على المخرج','جهر':'انحباس النَّفَس لقوة الاعتماد على المخرج','شدة':'انحباس الصوت لكمال الاعتماد على المخرج','توسط':'بين الشدة والرخاوة: يجري الصوت جريانًا ناقصًا','رخاوة':'جريان الصوت لضعف الاعتماد على المخرج','استعلاء':'ارتفاع أقصى اللسان نحو الحنك، فيُفخَّم الحرف','استفال':'انخفاض اللسان عن الحنك، فيُرقَّق الحرف','إطباق':'انطباق جسم اللسان على ما يحاذيه من الحنك فيُحصر الصوت بينهما','انفتاح':'تجافي اللسان عن الحنك فيخرج الصوت بينهما','إذلاق':'خفة الحرف لخروجه من ذَلَق اللسان أو الشفة','إصمات':'ثقل الحرف لخروجه بعيدًا عن ذَلَق اللسان والشفة','صفير':'صوت زائد حادّ يخرج من بين الثنايا وطرف اللسان','قلقلة':'اضطراب المخرج عند السكون حتى تُسمع له نبرة قوية','لين':'خروج الحرف بسهولة دون كلفة، في الواو والياء الساكنتين بعد فتح','انحراف':'ميل الحرف بعد خروجه إلى طرف اللسان أو ظهره','تكرير':'ارتعاد رأس اللسان عند النطق، ويُعرف ليُجتنب لا ليُعمل به','تفشي':'انتشار الهواء في الفم عند النطق','استطالة':'امتداد الصوت على حافة اللسان من أولها إلى آخرها','غنة':'صوت أغنّ مركّب في جسم النون والميم يخرج من الخيشوم','خفاء':'خفاء صوت الحرف، فيحتاج القارئ إلى بيانه'};
+var BASE=['همس','جهر','شدة','توسط','رخاوة','استعلاء','استفال','إطباق','انفتاح','إذلاق','إصمات'];
+var GROUPS=[['jawf','الجوف'],['halq','الحلق'],['lisan','اللسان'],['shafa','الشفتان']];
+var J='جهر',H='همس',SD='شدة',T='توسط',R='رخاوة',U='استعلاء',F='استفال',IT='إطباق',IN='انفتاح',DH='إذلاق',SM='إصمات';
+var L=[
+{k:'ا و ي',n:'حروف المد',g:'jawf',tg:'low',lips:'open',z:['jawf'],lb:['jawf','folds'],mks:'الجوف',
+ mk:'الجوف: الخلاء الممتد داخل الحلق والفم. حروف المد لا مخرج محقق لها، وإنما تنتهي بانتهاء الهواء، ولذلك تسمّى الحروف الهوائية.',
+ sf:[J,R,F,IN,SM,'خفاء'],
+ how:['الألف: يُفتح الفم ويبقى اللسان مستويًا، وما قبلها مفتوح دائمًا.','الواو المدية: تُضمّ الشفتان ضمًّا ناقصًا، وما قبلها مضموم.','الياء المدية: ينخفض الفك قليلًا ويرتفع وسط اللسان دون أن يلامس الحنك، وما قبلها مكسور.'],
+ ex:['قَالَ · يَقُولُ · قِيلَ','نُوحِيهَا (هود: 49)'],
+ err:['نقص المد الطبيعي عن حركتين أو الزيادة عليهما.','الألف تتبع ما قبلها: تُفخَّم بعد المفخّم «قَالَ» وتُرقَّق بعد المرقّق «كَانَ».','ترك ضمّ الشفتين مع الواو المدية.','إشباع الياء حتى تُسمع كأنها مشددة.']},
+{k:'ء',n:'الهمزة',g:'halq',tg:'rest',lips:'rest',dot:[256,302],z:['deep'],lb:['deep','folds'],mks:'أقصى الحلق',
+ mk:'أقصى الحلق، وهو أبعده مما يلي الصدر، عند الحنجرة.',sf:[J,SD,F,IN,SM],
+ how:['تنطبق الأوتار الصوتية انطباقًا تامًّا في أقصى الحلق.','ينحبس الصوت خلفها، ثم تنفتح فجأة فيخرج الصوت دفعة واحدة.','اللسان والشفتان في وضع مريح لا يشاركان.'],
+ ex:['أَأَنذَرْتَهُمْ (البقرة: 6)','يُؤْمِنُونَ · السَّمَاءِ'],
+ err:['تسهيل الهمزة الساكنة أو حذفها: «يُومِنُون» بدل «يُؤْمِنُونَ».','نطقها بضغط وتكلّف يشبه السعال.','قلقلتها إذا سكنت، وهي ليست من حروف القلقلة.','تحويلها إلى هاء أو عين.']},
+{k:'هـ',n:'الهاء',g:'halq',tg:'rest',lips:'rest',dot:[256,296],z:['deep'],lb:['deep'],mks:'أقصى الحلق',
+ mk:'أقصى الحلق، بعد مخرج الهمزة مباشرة.',sf:[H,R,F,IN,SM,'خفاء'],
+ how:['ينفتح أقصى الحلق دون انطباق.','يجري النَّفَس والصوت معًا بسهولة.','لضعفها يُعتنى ببيانها إذا تكررت أو سكنت أو وقعت آخر الكلمة.'],
+ ex:['اهْدِنَا الصِّرَاطَ','جِبَاهُهُمْ (التوبة: 35)','وَجْهَهُ'],
+ err:['إخفاؤها، خاصة في آخر الكلمة عند الوقف.','نطقها حاءً بتضييق الحلق.','تحريك الساكنة: «اهِدِنا».','اختلاسها إذا تكررت: «جِبَاهُهُمْ».']},
+{k:'ع',n:'العين',g:'halq',tg:'phar',lips:'rest',dot:[256,246],z:['mid'],lb:['mid','folds'],mks:'وسط الحلق',
+ mk:'وسط الحلق.',sf:[J,T,F,IN,SM],
+ how:['يضيق وسط الحلق بتراجع جذر اللسان نحو الجدار الخلفي للحلق.','تهتز الأوتار الصوتية ويجري الصوت جريانًا ناقصًا.','لا ينطبق الحلق انطباقًا تامًّا كما في الهمزة.'],
+ ex:['نَعْبُدُ · الْعَالَمِينَ','يَعْلَمُونَ'],
+ err:['نطقها همزة: «نَأْبُد».','الضغط عليها حتى تُخنق، أو قلقلتها إذا سكنت.','همسها حتى تقرب من الحاء.','تفخيمها إذا جاورت مفخّمًا: «الْعَظِيم».']},
+{k:'ح',n:'الحاء',g:'halq',tg:'phar',lips:'rest',dot:[256,246],z:['mid'],lb:['mid'],mks:'وسط الحلق',
+ mk:'وسط الحلق مع العين.',sf:[H,R,F,IN,SM],
+ how:['يضيق وسط الحلق كالعين، دون اهتزاز الأوتار.','يجري النَّفَس والصوت معًا فيُسمع احتكاك واضح.','يبقى أقصى اللسان منخفضًا فلا تصير خاءً.'],
+ ex:['الْحَمْدُ · الرَّحْمَٰنِ','فَاصْفَحْ عَنْهُمْ (الزخرف: 89)','فَسَبِّحْهُ (ق: 40)'],
+ err:['نطقها هاءً لضعف التضييق.','نطقها خاءً بخشونة ورفع أقصى اللسان.','قلبها عينًا أو هاءً إذا سكنت قبلهما: «فَاصْفَحْ عَنْهُمْ» و«فَسَبِّحْهُ»، والصواب إظهارها.']},
+{k:'غ',n:'الغين',g:'halq',tg:'ghayn',lips:'rest',dot:[252,186],z:['near'],lb:['near','folds'],mks:'أدنى الحلق',
+ mk:'أدنى الحلق، أي أقربه إلى الفم.',sf:[J,R,U,IN,SM],
+ how:['يقترب أقصى اللسان من الحنك اللحمي عند أدنى الحلق دون انطباق.','تهتز الأوتار ويجري الصوت.','يستعلي أقصى اللسان فتُفخَّم.'],
+ ex:['غَيْرِ الْمَغْضُوبِ','يَغْفِرُ','لَا تُزِغْ قُلُوبَنَا (آل عمران: 8)'],
+ err:['ترقيقها، خاصة إذا كُسرت.','همسها حتى تقرب من الخاء قبل حرف مهموس: «يَغْفِرُ».','إخفاؤها في القاف في «لَا تُزِغْ قُلُوبَنَا»، والواجب إظهارها.','نطقها قافًا بانطباق كامل.']},
+{k:'خ',n:'الخاء',g:'halq',tg:'ghayn',lips:'rest',dot:[252,186],z:['near'],lb:['near'],mks:'أدنى الحلق',
+ mk:'أدنى الحلق مع الغين.',sf:[H,R,U,IN,SM],
+ how:['يقترب أقصى اللسان من الحنك اللحمي كالغين.','يجري النَّفَس مع الصوت دون اهتزاز الأوتار.','يستعلي أقصى اللسان فتُفخَّم.'],
+ ex:['خَالِدِينَ','يَخْرُجُ','أَخْرَجَ'],
+ err:['ترقيقها مع الكسر: «خِلَالَ» تبقى مفخّمة.','نطقها كافًا بإطباق كامل.','جهرها حتى تقرب من الغين.','المبالغة في الحكّ حتى تُسمع خشخشة.']},
+{k:'ق',n:'القاف',g:'lisan',tg:'qaf',lips:'rest',dot:[236,145],lb:['velum'],mks:'أقصى اللسان مع الحنك اللحمي',
+ mk:'أقصى اللسان مما يلي الحلق مع ما يحاذيه من الحنك الأعلى اللحمي قرب اللهاة. وليست من حروف الحلق.',sf:[J,SD,U,IN,SM,'قلقلة'],
+ how:['يرتفع أقصى اللسان فينطبق على الحنك اللحمي عند اللهاة.','يرتفع جسم اللسان معه نحو الحنك فتُفخَّم دائمًا.','طرف اللسان مستقر خلف الأسنان السفلى.'],
+ ex:['قُلْ هُوَ اللَّهُ أَحَدٌ','يَقْطَعُونَ · مِن شَرِّ مَا خَلَقْ'],
+ err:['نطقها همزة: «ألب» بدل «قلب».','نطقها كالجيم القاهرية (g).','ترقيقها نحو الكاف، خاصة مع الكسر: «قِيلَ».','ترك القلقلة في الساكنة أو جعلها حركة.']},
+{k:'ك',n:'الكاف',g:'lisan',tg:'kaf',lips:'rest',dot:[213,131],lb:['velum'],mks:'أقصى اللسان أسفل القاف',
+ mk:'أقصى اللسان أسفل من مخرج القاف قليلًا مما يلي الفم، مع ما يحاذيه من الحنك الأعلى.',sf:[H,SD,F,IN,SM],
+ how:['يرتفع أقصى اللسان فينطبق على الحنك أمام موضع القاف قليلًا.','يبقى جسم اللسان منخفضًا فتُرقَّق.','طرف اللسان مستقر خلف الأسنان السفلى.'],
+ ex:['كِتَابٌ','إِيَّاكَ نَعْبُدُ','يُشْرِكُونَ'],
+ err:['تفخيمها حتى تقرب من القاف، خاصة قبل حروف الاستعلاء.','ترك الهمس في الساكنة: «يُشْرِكُونَ».','نطقها «تش» كما في بعض اللهجات.','قلقلتها، وهي ليست من حروف القلقلة.']},
+{k:'ج',n:'الجيم',g:'lisan',tg:'mid',lips:'rest',dot:[163,126],lb:['palate'],mks:'وسط اللسان مع الحنك الأعلى',
+ mk:'وسط اللسان مع ما يحاذيه من الحنك الأعلى.',sf:[J,SD,F,IN,SM,'قلقلة'],
+ how:['يرتفع وسط اللسان فينطبق على وسط الحنك الصلب.','طرف اللسان منخفض خلف الأسنان السفلى.','يبقى اللسان مستفلًا فتُرقَّق.'],
+ ex:['الْجَنَّةَ · أَجْرٌ','اجْتَبَاهُ (النحل: 121)','وَالْفَجْرِ'],
+ err:['تعطيشها حتى تصير كالجيم الشامية فتذهب الشدة.','نطقها كالجيم القاهرية (g) بنقل المخرج إلى أقصى اللسان.','مزجها بالدال: «دْج».','ترك القلقلة في «اجْتَبَاهُ» و«أَجْرٌ».']},
+{k:'ش',n:'الشين',g:'lisan',tg:'shin',lips:'rest',dot:[163,132],lb:['palate'],mks:'وسط اللسان مع الحنك الأعلى',
+ mk:'وسط اللسان مع ما يحاذيه من الحنك الأعلى، مع الجيم والياء.',sf:[H,R,F,IN,SM,'تفشي'],
+ how:['يرتفع وسط اللسان نحو الحنك دون انطباق.','تتقارب الأسنان وتنفرج الشفتان قليلًا.','ينتشر الهواء في الفم انتشارًا واضحًا.'],
+ ex:['الشَّيْطَانِ','شَهْرُ رَمَضَانَ','يَشْكُرُ'],
+ err:['ترك التفشي فتقرب من السين.','المبالغة في التفشي حتى يُسمع صفير.','جهرها حتى تقرب من الجيم المعطّشة.','تفخيمها قبل حرف مفخّم: «الشَّيْطَانِ».']},
+{k:'ي',n:'الياء',g:'lisan',tg:'ya',lips:'rest',dot:[163,140],lb:['palate'],mks:'وسط اللسان مع الحنك الأعلى',
+ mk:'وسط اللسان مع ما يحاذيه من الحنك الأعلى. هذا للياء المتحركة والساكنة بعد فتح، أما المدية فمن الجوف.',sf:[J,R,F,IN,SM,'لين'],
+ how:['يرتفع وسط اللسان نحو الحنك ويبقى بينهما فراغ أوسع من الشين.','تهتز الأوتار ويجري الصوت.','إذا سكنت بعد فتح كانت ياء لين تخرج بسهولة.'],
+ ex:['يَوْمِ الدِّينِ','عَلَيْهِمْ','إِيَّاكَ'],
+ err:['تخفيف الياء المشددة في «إِيَّاكَ»، وهو لحن جليّ يغيّر المعنى.','تشديد الياء المخففة.','مدّ ياء اللين في الوصل: «عَلَيْهِمْ».']},
+{k:'ض',n:'الضاد',g:'lisan',tg:'dad',lips:'rest',dot:[178,130],lb:['palate'],ins:'dad',raise:1,mks:'حافة اللسان مع الأضراس العليا',
+ mk:'إحدى حافتي اللسان أو كلتاهما مع ما يحاذيهما من الأضراس العليا. ومن الحافة اليسرى أسهل وأكثر.',sf:[J,R,U,IT,SM,'استطالة'],
+ how:['ترتفع حافة اللسان من أقصاها إلى ما دون الطرف وتلتصق بالأضراس العليا.','ينطبق جسم اللسان على الحنك فيمتلئ الفم بالصوت.','طرف اللسان حرّ لا يلامس الثنايا.'],
+ ex:['وَلَا الضَّالِّينَ','الْأَرْضِ','فَضْلُ اللَّهِ'],
+ err:['نطقها دالًا مفخّمة، فتذهب الرخاوة والاستطالة.','نطقها ظاءً بإخراج طرف اللسان.','قلقلتها، وهي ليست من حروف القلقلة.','ترقيقها.']},
+{k:'ل',n:'اللام',g:'lisan',tg:'lam',lips:'rest',dot:[100,145],lb:['gums'],ins:'lam',mks:'أدنى حافتي اللسان مع لثة الأسنان العليا',
+ mk:'أدنى حافتي اللسان إلى منتهى طرفه، مع ما يحاذيها من لثة الأسنان العليا: الضاحك والناب والرباعية والثنية.',sf:[J,T,F,IN,DH,'انحراف'],
+ how:['يرتفع طرف اللسان وحافتاه الأماميتان فيلامسان لثة الأسنان العليا.','يبقى وسط اللسان منخفضًا ليجري الصوت من جانبيه.','تُرقَّق دائمًا إلا لام لفظ الجلالة بعد فتح أو ضم.'],
+ ex:['بِسْمِ اللَّهِ (ترقيق) · قَالَ اللَّهُ (تفخيم)','قُلْ نَعَمْ (الصافات: 18)','جَعَلْنَا'],
+ err:['تفخيم اللام المرققة، خاصة قبل حرف مفخّم: «وَلَا الضَّالِّينَ».','قلقلة اللام الساكنة: «قُلْ».','إدغامها في النون: «جَعَلْنَا»، والصواب إظهارها.','ترقيق لام الجلالة بعد فتح أو ضم.']},
+{k:'ن',n:'النون',g:'lisan',tg:'nun',lips:'rest',dot:[98,149],lb:['gums','nose'],z:['nose'],nas:1,mks:'طرف اللسان مع لثة الثنايا العليا',
+ mk:'طرف اللسان مع ما يحاذيه من لثة الثنايا العليا، تحت مخرج اللام قليلًا. وغنّتها من الخيشوم.',sf:[J,T,F,IN,DH,'غنة'],
+ how:['يلامس طرف اللسان لثة الثنايا العليا.','ينخفض الحنك اللحمي فيجري الصوت إلى الأنف.','تكمل الغنة حركتين في النون المشددة.'],
+ ex:['إِنَّ اللَّهَ','أَنْعَمْتَ (إظهار)','نَسْتَعِينُ'],
+ err:['نقص الغنة في المشددة أو المبالغة فيها.','إخراجها من الأنف وحده دون أن يلامس اللسان مخرجه في الإظهار.','قلقلة النون الساكنة: «أَنْعَمْتَ».']},
+{k:'ر',n:'الراء',g:'lisan',tg:'ra',lips:'rest',dot:[103,143],lb:['gums'],mks:'ظهر رأس اللسان مع لثة الثنايا العليا',
+ mk:'طرف اللسان مع ظهره مما يلي رأسه، مع لثة الثنايا العليا. وهو أدخل إلى ظهر اللسان من مخرج النون قليلًا.',sf:[J,T,F,IN,DH,'انحراف','تكرير'],
+ how:['يلامس ظهر رأس اللسان لثة الثنايا العليا ملامسة خفيفة.','يُضبط رأس اللسان فلا يرتعد ارتعادًا متكررًا.','تُفخَّم مفتوحة ومضمومة، وتُرقَّق مكسورة.'],
+ ex:['الرَّحْمَٰنِ (تفخيم)','رِجَالٌ (ترقيق)','مَرْيَمَ'],
+ err:['المبالغة في التكرير، خاصة في المشددة: «الرَّحْمَٰنِ».','إلصاق اللسان إلصاقًا تامًّا حتى تقرب من الدال.','ترقيق المفخّمة أو تفخيم المرقّقة.']},
+{k:'ط',n:'الطاء',g:'lisan',tg:'tta',lips:'rest',dot:[95,150],lb:['teeth'],raise:1,mks:'طرف اللسان مع أصول الثنايا العليا',
+ mk:'طرف اللسان مع أصول الثنايا العليا، أي موضع اتصالها باللثة.',sf:[J,SD,U,IT,SM,'قلقلة'],
+ how:['يلامس طرف اللسان أصول الثنايا العليا.','ينطبق جسم اللسان على الحنك فيمتلئ الفم بالصوت.','هي أقوى الحروف تفخيمًا لاجتماع الاستعلاء والإطباق.'],
+ ex:['الصِّرَاطَ','مَطْلَعِ الْفَجْرِ (القدر: 5)','بَسَطتَّ (المائدة: 28)'],
+ err:['ترقيقها حتى تصير تاءً.','ترك القلقلة في «مَطْلَعِ».','في «بَسَطتَّ» تُدغم الطاء في التاء إدغامًا ناقصًا يبقى معه الإطباق.','همسها بإطلاق نَفَس معها.']},
+{k:'د',n:'الدال',g:'lisan',tg:'ta',lips:'rest',dot:[95,150],lb:['teeth'],mks:'طرف اللسان مع أصول الثنايا العليا',
+ mk:'طرف اللسان مع أصول الثنايا العليا، مع الطاء والتاء.',sf:[J,SD,F,IN,SM,'قلقلة'],
+ how:['يلامس طرف اللسان أصول الثنايا العليا.','يبقى جسم اللسان منخفضًا فتُرقَّق.','تهتز الأوتار الصوتية.'],
+ ex:['الدِّينِ','قَدْ أَفْلَحَ','أَحَدٌ (وقفًا: أَحَدْ)'],
+ err:['ترك القلقلة فتصير تاءً: «قَدْ».','تفخيمها قبل حرف مفخّم.','نطقها ضادًا بإطباق.','إتباعها بحركة أو همزة عند القلقلة.']},
+{k:'ت',n:'التاء',g:'lisan',tg:'ta',lips:'rest',dot:[95,150],lb:['teeth'],mks:'طرف اللسان مع أصول الثنايا العليا',
+ mk:'طرف اللسان مع أصول الثنايا العليا، مع الطاء والدال.',sf:[H,SD,F,IN,SM],
+ how:['يلامس طرف اللسان أصول الثنايا العليا.','يبقى جسم اللسان منخفضًا فتُرقَّق.','لا تهتز الأوتار الصوتية.'],
+ ex:['تَعْمَلُونَ','أَنْعَمْتَ','فِتْنَةٌ'],
+ err:['تفخيمها قبل حرف مفخّم: «تَطْمَئِنُّ».','ترك الهمس في الساكنة فتقرب من الدال: «فِتْنَةٌ».','قلقلتها، وهي ليست من حروف القلقلة.','نطقها طاءً بإطباق اللسان.']},
+{k:'ص',n:'الصاد',g:'lisan',tg:'sad',lips:'rest',dot:[92,178],lb:['teeth'],raise:1,mks:'طرف اللسان فوق الثنايا السفلى',
+ mk:'طرف اللسان مع ما فوق الثنايا السفلى، ويبقى بينه وبين الثنايا العليا مجرى ضيّق يخرج منه الصفير.',sf:[H,R,U,IT,SM,'صفير'],
+ how:['يقترب طرف اللسان من الثنايا السفلى ويبقى مجرى ضيّق.','ينطبق جسم اللسان على الحنك فتُفخَّم.','تتقارب الأسنان دون أن تنطبق.'],
+ ex:['الصِّرَاطَ','وَالْعَصْرِ','الصَّابِرِينَ'],
+ err:['ترقيقها حتى تصير سينًا.','ضعف الصفير أو المبالغة فيه.','قلبها زايًا قبل الدال: «يَصْدُرَ» (القصص: 23).']},
+{k:'ز',n:'الزاي',g:'lisan',tg:'sin',lips:'rest',dot:[92,178],lb:['teeth'],mks:'طرف اللسان فوق الثنايا السفلى',
+ mk:'طرف اللسان مع ما فوق الثنايا السفلى، مع الصاد والسين.',sf:[J,R,F,IN,SM,'صفير'],
+ how:['يقترب طرف اللسان من الثنايا السفلى ويبقى مجرى ضيّق.','تهتز الأوتار الصوتية.','يبقى اللسان منخفضًا فتُرقَّق.'],
+ ex:['زُيِّنَ','الزَّكَاةَ','رِزْقًا'],
+ err:['همسها حتى تصير سينًا، خاصة إذا سكنت.','نطقها ذالًا بإخراج اللسان.','تفخيمها.']},
+{k:'س',n:'السين',g:'lisan',tg:'sin',lips:'rest',dot:[92,178],lb:['teeth'],mks:'طرف اللسان فوق الثنايا السفلى',
+ mk:'طرف اللسان مع ما فوق الثنايا السفلى، مع الصاد والزاي.',sf:[H,R,F,IN,SM,'صفير'],
+ how:['يقترب طرف اللسان من الثنايا السفلى ويبقى مجرى ضيّق.','لا تهتز الأوتار الصوتية.','يبقى اللسان منخفضًا فتُرقَّق.'],
+ ex:['الْمُسْتَقِيمَ','نَسْتَعِينُ','وَأَقْسِطُوا (الحجرات: 9)'],
+ err:['تفخيمها قبل حرف مفخّم فتقرب من الصاد: «وَأَقْسِطُوا».','جهرها حتى تقرب من الزاي قبل حرف مجهور: «يَسْجُدُونَ».','نطقها ثاءً بإخراج اللسان (اللثغة).']},
+{k:'ظ',n:'الظاء',g:'lisan',tg:'zha',lips:'rest',dot:[85,166],lb:['teeth'],raise:1,mks:'طرف اللسان مع أطراف الثنايا العليا',
+ mk:'طرف اللسان مع أطراف الثنايا العليا.',sf:[J,R,U,IT,SM],
+ how:['يلامس طرف اللسان أطراف الثنايا العليا.','ينطبق جسم اللسان على الحنك فيمتلئ الفم بالصوت.','تهتز الأوتار الصوتية.'],
+ ex:['الظَّالِمِينَ','عَظِيمٌ','مَحْظُورًا (الإسراء: 20)'],
+ err:['نطقها زايًا مفخّمة كما في العامية.','ترقيقها فتصير ذالًا.','خلطها بالضاد، ومخرج الضاد حافة اللسان لا طرفه.']},
+{k:'ذ',n:'الذال',g:'lisan',tg:'tha',lips:'rest',dot:[85,166],lb:['teeth'],mks:'طرف اللسان مع أطراف الثنايا العليا',
+ mk:'طرف اللسان مع أطراف الثنايا العليا، مع الظاء والثاء.',sf:[J,R,F,IN,SM],
+ how:['يلامس طرف اللسان أطراف الثنايا العليا.','تهتز الأوتار الصوتية.','يبقى اللسان منخفضًا فتُرقَّق.'],
+ ex:['الَّذِينَ','ذَٰلِكَ','كَانَ مَحْذُورًا (الإسراء: 57)'],
+ err:['نطقها زايًا أو دالًا كما في العامية.','تفخيمها فتصير ظاءً: «مَحْذُورًا» غير «مَحْظُورًا».','همسها حتى تقرب من الثاء.']},
+{k:'ث',n:'الثاء',g:'lisan',tg:'tha',lips:'rest',dot:[85,166],lb:['teeth'],mks:'طرف اللسان مع أطراف الثنايا العليا',
+ mk:'طرف اللسان مع أطراف الثنايا العليا، مع الظاء والذال.',sf:[H,R,F,IN,SM],
+ how:['يلامس طرف اللسان أطراف الثنايا العليا.','لا تهتز الأوتار، ويجري النَّفَس بين اللسان والأسنان.','يبقى اللسان منخفضًا فتُرقَّق.'],
+ ex:['ثُمَّ','الْكَوْثَرَ','مَثَلُ'],
+ err:['نطقها تاءً أو سينًا كما في العامية: «تُمّ».','إخراج اللسان كثيرًا خارج الفم.','ضعف الهمس.']},
+{k:'ف',n:'الفاء',g:'shafa',tg:'rest',lips:'fa',dot:[89,163],lb:['lips','teeth'],mks:'باطن الشفة السفلى مع أطراف الثنايا العليا',
+ mk:'باطن الشفة السفلى مع أطراف الثنايا العليا.',sf:[H,R,F,IN,DH],
+ how:['يلامس باطن الشفة السفلى أطراف الثنايا العليا.','لا تهتز الأوتار، ويجري النَّفَس بينهما.','الشفة العليا لا تشارك.'],
+ ex:['الْفَلَقِ','يُنفِقُونَ','فَطَرَ السَّمَاوَاتِ'],
+ err:['جهرها حتى تصير كالحرف اللاتيني v.','تفخيمها قبل حرف مفخّم: «فَطَرَ».','قلقلتها إذا سكنت.']},
+{k:'ب',n:'الباء',g:'shafa',tg:'rest',lips:'closed',dot:[58,157],lb:['lips'],mks:'الشفتان بانطباق',
+ mk:'الشفتان معًا بانطباق.',sf:[J,SD,F,IN,DH,'قلقلة'],
+ how:['تنطبق الشفتان انطباقًا تامًّا.','اللسان في وضع مريح.','تهتز الأوتار الصوتية.'],
+ ex:['بِسْمِ اللَّهِ','يَبْخَلُونَ','تَبَّتْ يَدَا أَبِي لَهَبٍ وَتَبَّ'],
+ err:['ترك القلقلة في الساكنة.','تفخيمها قبل حرف مفخّم: «بَطَرًا» (الأنفال: 47).','الضغط على الشفتين بقوة.','همسها حتى تقرب من الحرف اللاتيني p.']},
+{k:'م',n:'الميم',g:'shafa',tg:'rest',lips:'closed',dot:[58,157],lb:['lips','nose'],z:['nose'],nas:1,mks:'الشفتان بانطباق',
+ mk:'الشفتان معًا بانطباق، وغنّتها من الخيشوم.',sf:[J,T,F,IN,DH,'غنة'],
+ how:['تنطبق الشفتان انطباقًا تامًّا.','ينخفض الحنك اللحمي فيجري الصوت إلى الأنف.','تكمل الغنة حركتين في الميم المشددة.'],
+ ex:['الْحَمْدُ','ثُمَّ','هُمْ فِيهَا · عَلَيْهِمْ وَلَا'],
+ err:['نقص الغنة في «ثُمَّ».','إخفاء الميم الساكنة قبل الفاء والواو، والواجب إظهارها أشدّ إظهار.','قلقلتها إذا سكنت.']},
+{k:'و',n:'الواو',g:'shafa',tg:'rest',lips:'round',dot:[50,157],lb:['lips'],mks:'الشفتان بانفتاح',
+ mk:'الشفتان معًا بانفتاح، مع ضمّهما. هذا للواو المتحركة والساكنة بعد فتح، أما المدية فمن الجوف.',sf:[J,R,F,IN,SM,'لين'],
+ how:['تنضم الشفتان وتتقدّمان مع ترك فرجة بينهما.','تهتز الأوتار ويجري الصوت.','إذا سكنت بعد فتح كانت واو لين.'],
+ ex:['وَالضُّحَىٰ','يَوْمِ','عَدُوًّا'],
+ err:['نطقها كالحرف اللاتيني v بإشراك الأسنان.','ترك ضمّ الشفتين.','تخفيف الواو المشددة: «عَدُوًّا».','مدّ واو اللين في الوصل.']}
+];
+
+
+var $=function(id){return document.getElementById(id);};
+var cv=$('cv'), ctx=cv.getContext('2d'), W=720, H=1280;
+var off=document.createElement('canvas'); off.width=W; off.height=H; var oc=off.getContext('2d');
+var S=1.85, OX=690, OY=233;
+function U(c){c.setTransform(-S,0,0,S,OX,OY);}
+function I(c){c.setTransform(1,0,0,1,0,0);}
+function P(x,y){return [OX-S*x, OY+S*y];}
+function cl(v){return v<0?0:v>1?1:v;}
+function ease(k){k=cl(k);return k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;}
+function lerpA(a,b,k){return a.map(function(v,i){return v+(b[i]-v)*k;});}
+
+var FACE=new Path2D('M160 8 C110 8 76 30 70 62 C68 72 66 78 62 84 C54 96 44 106 38 114 C36 118 40 122 48 122 C56 122 60 124 62 128 L64 140 L66 176 C62 186 60 200 66 214 C72 232 86 240 104 242 C140 246 170 250 186 262 L196 380 L318 380 C322 300 346 250 348 170 C350 70 270 8 160 8 Z');
+var BEARD=new Path2D('M262 140 C250 170 232 200 200 214 C170 226 130 222 110 206 C96 196 84 188 74 188 L66 192 C62 204 62 214 68 226 C76 240 92 246 110 246 C140 250 168 254 188 262 C210 250 240 232 262 200 C276 180 278 160 270 140 Z');
+var MOUS=new Path2D('M52 127 C60 124 72 125 82 132 C72 137 61 136 52 132 Z');
+var HAIR=new Path2D('M200 66 C262 70 322 96 344 122 L347 175 C335 160 310 150 286 146 C270 118 238 86 200 66 Z');
+var SIDEB=new Path2D('M256 112 C268 120 274 136 270 152 L262 152 C262 138 258 124 248 114 Z');
+var KUFI=new Path2D('M66 62 C72 22 120 2 172 2 C266 2 346 48 348 124 C302 96 244 72 172 66 C124 62 92 64 66 62 Z');
+var THOBE=new Path2D('M-120 600 L-120 372 C-60 330 110 312 190 318 L326 318 C400 322 470 345 520 380 L520 600 Z');
+var COLLAR=new Path2D('M186 300 C230 312 290 312 330 300 L332 322 C290 334 230 334 184 322 Z');
+var CAV=new Path2D('M72 120 C120 108 200 100 262 116 L268 380 L238 380 L238 300 C200 262 150 236 100 228 C80 222 70 200 72 172 L86 158 L86 150 Z');
+var NASAL=new Path2D('M72 120 C120 108 200 100 262 116 L258 128 C200 116 130 116 86 138 Z');
+var PALATE=new Path2D('M88 152 C118 128 160 120 200 124 L200 114 C158 110 118 116 84 142 Z');
+var VELUM=new Path2D('M198 120 C226 124 242 138 247 160');
+var UT=new Path2D('M84 146 L94 148 L92 164 L86 164 Z'), LT=new Path2D('M86 198 L92 182 L96 182 L96 200 Z');
+var ULIP=new Path2D('M66 130 C54 134 49 144 54 152 C62 157 76 157 86 152 L86 134 Z');
+var LLIP=new Path2D('M54 160 C50 168 54 178 64 182 C74 183 84 180 90 172 L88 160 C78 157 64 157 54 160 Z');
+var JAW=new Path2D('M72 202 C70 222 86 236 110 238 C150 240 200 236 236 222 C252 214 258 190 256 150');
+function tonguePath(v){return new Path2D('M'+v[0]+' '+v[1]+' C'+v[2]+' '+v[3]+','+v[4]+' '+v[5]+','+v[6]+' '+v[7]+' C'+v[8]+' '+v[9]+','+v[10]+' '+v[11]+','+v[12]+' '+v[13]+' C'+v[14]+' '+v[15]+','+v[16]+' '+v[17]+',238 300 L205 300 C195 262,160 232,112 224 C98 221,'+(v[0]-3)+' '+(v[1]+14)+','+v[0]+' '+v[1]+'Z');}
+
+// seeded texture points (beard hairs, cap stitching)
+var seed=7; function rnd(){seed=(seed*16807)%2147483647;return seed/2147483647;}
+I(ctx); var hairs=[], dots=[];
+for(var n=0;n<1400;n++){var x=40+rnd()*250,y=120+rnd()*150; if(ctx.isPointInPath(BEARD,x,y)||ctx.isPointInPath(MOUS,x,y))hairs.push([x,y,(rnd()-.5)*2.2,1.5+rnd()*2.5]);}
+for(var gx=70;gx<350;gx+=7)for(var gy=4;gy<126;gy+=7){var px=gx+((gy/7)%2?3.5:0); if(ctx.isPointInPath(KUFI,px,gy))dots.push([px,gy]);}
+
+function makhraj(x){
+  if(x.g==='jawf')return {p:[165,175],r:150};
+  return {p:x.dot,r:x.g==='halq'?62:66};
+}
+function exampleWord(x){return x.ex[0].split(' (')[0];}
+
+var DUR=5200;
+function drawScene(x,t,now){
+  var poseIn=ease((t-450)/700), poseOut=ease((t-4500)/600), pk=poseIn*(1-poseOut);
+  var shid=has(x,SD), mk=makhraj(x);
+  var release=shid&&t>2700;
+  var tg=release?lerpA(SH[x.tg],SH.rest,ease((t-2700)/250)):lerpA(SH.rest,SH[x.tg],pk);
+  var lipKey=(release&&x.lips==='closed')?'rest':x.lips, lp=lerpA(LIPS.rest,LIPS[lipKey],pk);
+  var fade=1-ease((t-4700)/500);
+  var glowA=cl((t-1150)/350)*(1-cl((t-4400)/400));
+
+  I(ctx);
+  var bg=ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,'#F6F8FA'); bg.addColorStop(1,'#DCE2E7'); ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  var vg=ctx.createRadialGradient(W*.55,H*.42,200,W*.55,H*.42,900); vg.addColorStop(0,'rgba(255,255,255,.55)'); vg.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+
+  U(ctx);
+  // garment
+  var tb=ctx.createLinearGradient(0,318,0,600); tb.addColorStop(0,'#FFFFFF'); tb.addColorStop(1,'#E2E6E9'); ctx.fillStyle=tb; ctx.fill(THOBE);
+  ctx.strokeStyle='rgba(120,130,140,.18)'; ctx.lineWidth=1.2; [[60,380,40,600],[380,390,410,600],[250,340,262,600]].forEach(function(f){ctx.beginPath();ctx.moveTo(f[0],f[1]);ctx.lineTo(f[2],f[3]);ctx.stroke();});
+  // skin
+  var sk=ctx.createLinearGradient(40,0,350,0); sk.addColorStop(0,'#E6B990'); sk.addColorStop(.55,'#D6A078'); sk.addColorStop(1,'#B98260');
+  ctx.fillStyle=sk; ctx.fill(FACE); ctx.strokeStyle='rgba(140,90,60,.55)'; ctx.lineWidth=1.2; ctx.stroke(FACE);
+  var ck=ctx.createRadialGradient(150,170,10,150,170,90); ck.addColorStop(0,'rgba(200,110,90,.18)'); ck.addColorStop(1,'rgba(200,110,90,0)'); ctx.fillStyle=ck; ctx.fill(FACE);
+  ctx.fillStyle=tb; ctx.fill(COLLAR); ctx.strokeStyle='rgba(120,130,140,.35)'; ctx.stroke(COLLAR);
+  // beard
+  ctx.fillStyle='rgba(38,29,23,.86)'; ctx.fill(BEARD);
+  ctx.strokeStyle='rgba(20,14,10,.55)'; ctx.lineWidth=.7;
+  hairs.forEach(function(h){ctx.beginPath();ctx.moveTo(h[0],h[1]);ctx.lineTo(h[0]+h[2],h[1]+h[3]);ctx.stroke();});
+  // hair, cap
+  ctx.fillStyle='#231A15'; ctx.fill(HAIR); ctx.fill(SIDEB);
+  var kg=ctx.createLinearGradient(0,0,0,126); kg.addColorStop(0,'#FFFFFF'); kg.addColorStop(1,'#DADFE3'); ctx.fillStyle=kg; ctx.fill(KUFI);
+  ctx.fillStyle='rgba(150,160,170,.45)'; dots.forEach(function(d){ctx.beginPath();ctx.arc(d[0],d[1],1.1,0,6.283);ctx.fill();});
+  ctx.strokeStyle='rgba(120,130,140,.45)'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(348,124); ctx.bezierCurveTo(302,96,244,72,172,66); ctx.bezierCurveTo(124,62,92,64,66,62); ctx.stroke();
+  // eye and brow
+  ctx.fillStyle='#FBF8F3'; ctx.beginPath(); ctx.moveTo(72,88); ctx.quadraticCurveTo(86,79,99,88); ctx.quadraticCurveTo(86,93,72,88); ctx.fill();
+  ctx.fillStyle='#3A2718'; ctx.beginPath(); ctx.arc(77.5,87.5,3.6,0,6.283); ctx.fill();
+  ctx.strokeStyle='#5A3A26'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(71,87); ctx.quadraticCurveTo(86,77,100,87); ctx.stroke();
+  ctx.strokeStyle='#241A14'; ctx.lineWidth=4; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(68,74); ctx.quadraticCurveTo(86,64,106,71); ctx.stroke();
+  ctx.strokeStyle='rgba(120,70,50,.6)'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(56,117); ctx.quadraticCurveTo(62,111,66,118); ctx.stroke();
+
+  // cutaway window (offscreen, feathered)
+  I(oc); oc.clearRect(0,0,W,H); U(oc);
+  oc.save(); oc.beginPath(); oc.ellipse(190,210,140,132,0,0,6.283); oc.clip();
+  var mg=oc.createRadialGradient(180,200,20,180,200,160); mg.addColorStop(0,'#C9685A'); mg.addColorStop(1,'#9E4A3F'); oc.fillStyle=mg; oc.fillRect(40,70,320,320);
+  oc.strokeStyle='rgba(255,210,200,.18)'; oc.lineWidth=1.2;
+  for(var m=0;m<14;m++){oc.beginPath();oc.moveTo(110+m*12,250);oc.bezierCurveTo(130+m*12,210,170+m*10,190,200+m*8,150);oc.stroke();}
+  oc.fillStyle='#3B1414'; oc.fill(CAV); oc.fillStyle='#4E1A1A'; oc.fill(NASAL);
+  for(var vy=126;vy<380;vy+=42){oc.fillStyle='#EADCC4';oc.strokeStyle='#BFA47F';oc.lineWidth=1.2;oc.beginPath();oc.roundRect?oc.roundRect(280,vy,34,34,7):oc.rect(280,vy,34,34);oc.fill();oc.stroke();}
+  oc.strokeStyle='#A8463C'; oc.lineWidth=6; oc.beginPath(); oc.moveTo(266,116); oc.bezierCurveTo(274,160,276,250,270,380); oc.stroke();
+  oc.fillStyle='#EFE2CC'; oc.fill(PALATE); oc.strokeStyle='#C9B391'; oc.lineWidth=1.2; oc.stroke(PALATE);
+  oc.strokeStyle='#D9867C'; oc.lineWidth=10; oc.lineCap='round'; oc.stroke(VELUM);
+  oc.fillStyle='#D9867C'; oc.beginPath(); oc.arc(248,166,5,0,6.283); oc.fill();
+  oc.strokeStyle='rgba(239,226,204,.9)'; oc.lineWidth=7; oc.stroke(JAW);
+  oc.fillStyle='#F4EEDF'; oc.fill(UT); oc.fill(LT);
+  var tp=tonguePath(tg), tgr=oc.createLinearGradient(0,140,0,300); tgr.addColorStop(0,'#EE939A'); tgr.addColorStop(1,'#B23F4C');
+  oc.fillStyle=tgr; oc.fill(tp); oc.strokeStyle='#8E2E3A'; oc.lineWidth=1.4; oc.stroke(tp);
+  oc.save(); oc.clip(tp); oc.strokeStyle='rgba(255,220,220,.25)'; oc.lineWidth=1;
+  for(var s=0;s<7;s++){oc.beginPath();oc.moveTo(100+s*8,220);oc.bezierCurveTo(150,200-s*6,200,190-s*4,250,200+s*10);oc.stroke();} oc.restore();
+  oc.strokeStyle='#E7C9A0'; oc.lineWidth=2; for(var r=310;r<380;r+=11){oc.beginPath();oc.moveTo(238,r);oc.lineTo(262,r);oc.stroke();}
+  oc.strokeStyle='#F0D9B5'; oc.lineWidth=3; oc.beginPath(); oc.moveTo(242,262); oc.quadraticCurveTo(232,272,236,288); oc.stroke();
+  oc.restore();
+  // feather the window edge
+  I(oc); oc.globalCompositeOperation='destination-in';
+  var c0=P(190,210); oc.save(); oc.translate(c0[0],c0[1]); oc.scale(1,132/140);
+  var fg=oc.createRadialGradient(0,0,0,0,0,140*S); fg.addColorStop(0,'rgba(0,0,0,1)'); fg.addColorStop(.74,'rgba(0,0,0,1)'); fg.addColorStop(1,'rgba(0,0,0,0)');
+  oc.fillStyle=fg; oc.beginPath(); oc.arc(0,0,140*S,0,6.283); oc.fill(); oc.restore(); oc.globalCompositeOperation='source-over';
+  I(ctx); ctx.globalAlpha=.9; ctx.drawImage(off,0,0); ctx.globalAlpha=1;
+
+  // lips, moustache, ear on top
+  U(ctx);
+  var lg=ctx.createLinearGradient(50,0,90,0); lg.addColorStop(0,'#C0776A'); lg.addColorStop(1,'#A35E52');
+  ctx.save(); ctx.translate(lp[0],lp[1]); ctx.fillStyle=lg; ctx.fill(ULIP); ctx.restore();
+  ctx.save(); ctx.translate(lp[2],lp[3]); ctx.fillStyle=lg; ctx.fill(LLIP); ctx.restore();
+  ctx.fillStyle='rgba(38,29,23,.9)'; ctx.fill(MOUS);
+  var eg=ctx.createRadialGradient(300,140,4,300,140,28); eg.addColorStop(0,'#C88E69'); eg.addColorStop(1,'#B07A58');
+  ctx.fillStyle=eg; ctx.beginPath(); ctx.ellipse(302,142,15,27,0,0,6.283); ctx.fill();
+  ctx.strokeStyle='rgba(120,70,50,.6)'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(296,124); ctx.bezierCurveTo(310,132,310,154,298,162); ctx.stroke();
+
+  // glow, breath, burst
+  I(ctx);
+  if(glowA>0){
+    var p=P(mk.p[0],mk.p[1]), pulse=1+.07*Math.sin(now/170), R=mk.r*pulse;
+    var flow=!shid||release;
+    if(flow){
+      var ex=x.nas?P(14,114):P(18,154), ex2=x.nas?P(-40,110):P(-40,156), cpt=P(Math.min(mk.p[0],170)*.6+60,162);
+      var ba=glowA*(shid?cl((t-2700)/200):1)*(.75+.25*Math.sin(now/120));
+      ctx.save(); ctx.filter='blur(9px)'; ctx.globalAlpha=ba;
+      var bgd=ctx.createLinearGradient(p[0],p[1],ex2[0],ex2[1]); bgd.addColorStop(0,'rgba(255,214,150,.95)'); bgd.addColorStop(.7,'rgba(255,236,200,.7)'); bgd.addColorStop(1,'rgba(255,245,225,0)');
+      ctx.strokeStyle=bgd; ctx.lineWidth=36; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(p[0],p[1]);
+      if(x.g==='shafa'){ctx.lineTo(ex2[0],ex2[1]);} else {ctx.quadraticCurveTo(cpt[0],cpt[1],ex[0],ex[1]); ctx.lineTo(ex2[0],ex2[1]);}
+      ctx.stroke(); ctx.restore();
+    }
+    ctx.save(); ctx.globalCompositeOperation='screen'; ctx.globalAlpha=glowA;
+    var gg=ctx.createRadialGradient(p[0],p[1],0,p[0],p[1],R*1.9); gg.addColorStop(0,'rgba(255,240,190,1)'); gg.addColorStop(.3,'rgba(255,176,70,.9)'); gg.addColorStop(1,'rgba(255,120,20,0)');
+    ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(p[0],p[1],R*1.9,0,6.283); ctx.fill();
+    if(x.nas){var np=P(44,112), ng=ctx.createRadialGradient(np[0],np[1],0,np[0],np[1],70); ng.addColorStop(0,'rgba(255,220,150,.9)'); ng.addColorStop(1,'rgba(255,150,40,0)'); ctx.fillStyle=ng; ctx.beginPath(); ctx.arc(np[0],np[1],70,0,6.283); ctx.fill();}
+    ctx.restore();
+    if(shid&&t>2650&&t<3400){var bk=(t-2650)/750; ctx.save(); ctx.globalAlpha=(1-bk)*glowA; ctx.strokeStyle='#FFE2A8'; ctx.lineWidth=5; ctx.beginPath(); ctx.arc(p[0],p[1],20+bk*110,0,6.283); ctx.stroke(); ctx.restore();}
+    ctx.save(); ctx.globalAlpha=glowA; ctx.direction='rtl'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    var gl=x.k.length>2?'ا و ي':x.k; ctx.font='700 '+(gl.length>2?52:78)+'px Amiri, serif';
+    ctx.shadowColor='rgba(255,140,30,.95)'; ctx.shadowBlur=24; ctx.fillStyle='#FFFFFF'; ctx.fillText(gl,p[0],p[1]+4); ctx.restore();
+    // label
+    var la=cl((t-1500)/400)*fade;
+    ctx.save(); ctx.globalAlpha=la; ctx.direction='rtl'; ctx.textAlign='center'; ctx.font='600 30px "IBM Plex Sans Arabic", sans-serif';
+    var ly=Math.max(300,p[1]-R*1.6-10), lx=Math.min(W-170,Math.max(170,p[0]));
+    var tw=ctx.measureText(x.mks).width+36; ctx.fillStyle='rgba(19,35,58,.78)'; roundRect(ctx,lx-tw/2,ly-27,tw,52,26); ctx.fill();
+    ctx.fillStyle='#FFFFFF'; ctx.fillText(x.mks,lx,ly+10); ctx.restore();
+  }
+
+  // titles
+  ctx.save(); ctx.direction='rtl'; ctx.textAlign='center';
+  ctx.globalAlpha=cl(t/300)*fade+(1-fade)*0;
+  ctx.fillStyle='#13233A'; ctx.font='700 112px Amiri, serif'; ctx.fillText(x.k.length>2?'ا و ي':x.k, W/2, 150);
+  ctx.font='600 34px "IBM Plex Sans Arabic", sans-serif'; ctx.fillStyle='#566377'; ctx.fillText('مخرج '+x.n, W/2, 205);
+  var wa=cl((t-2300)/400)*fade, word=exampleWord(x);
+  if(wa>0){
+    ctx.globalAlpha=wa; var fs=68; ctx.font='700 '+fs+'px Amiri, serif'; while(ctx.measureText(word).width>W-120&&fs>34){fs-=4;ctx.font='700 '+fs+'px Amiri, serif';}
+    var ww=Math.min(W-60,ctx.measureText(word).width+70); ctx.fillStyle='rgba(255,255,255,.88)'; roundRect(ctx,W/2-ww/2,1052,ww,112,22); ctx.fill();
+    ctx.fillStyle='#8A1F4A'; ctx.fillText(word,W/2,1130);
+  }
+  ctx.globalAlpha=1; ctx.font='500 22px "IBM Plex Sans Arabic", sans-serif'; ctx.fillStyle='rgba(19,35,58,.55)';
+  ctx.fillText('summd567-sudo.github.io/makharij', W/2, 1236);
+  ctx.restore();
+}
+function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+var has=function(x,s){return x.sf.indexOf(s)>-1;};
+
+// picker
+var cur=7;
+GROUPS.forEach(function(g){
+  var row=document.createElement('div'); row.className='grp';
+  row.innerHTML='<span class="grp-name">'+g[1]+'</span><div class="keys"></div>';
+  L.forEach(function(x,i){ if(x.g!==g[0])return;
+    var b=document.createElement('button'); b.type='button'; b.className='key'; b.textContent=x.k; b.setAttribute('aria-label',x.n); b.dataset.i=i;
+    b.onclick=function(){if(rec)return; cur=i; mark(); play([i]);};
+    row.querySelector('.keys').appendChild(b);
+  });
+  $('picker').appendChild(row);
+});
+function mark(){document.querySelectorAll('.key').forEach(function(b){b.setAttribute('aria-pressed',String(+b.dataset.i===cur));});}
+try{var m=/^#l(\d+)$/.exec(location.hash); if(m&&+m[1]<L.length)cur=+m[1];}catch(e){}
+mark();
+
+// playback
+var seq=null, rec=null, chunks=[];
+function play(list){seq={list:list,k:0,t0:performance.now()};}
+function status(h){$('status').innerHTML=h;}
+function loop(now){
+  if(seq){
+    var t=now-seq.t0;
+    if(t>=DUR){seq.k++; seq.t0=now; t=0; if(seq.k>=seq.list.length){seq=null; if(rec){setTimeout(function(){rec&&rec.stop();},120);} }}
+    if(seq){cur=seq.list[seq.k]; mark(); drawScene(L[cur],t,now); if(rec)status('<b>جارٍ التسجيل</b>: '+L[cur].n+' ('+(seq.k+1)+' من '+seq.list.length+')');}
+    else drawScene(L[cur],2900,now);
+  } else drawScene(L[cur],2900,now);
+  requestAnimationFrame(loop);
+}
+$('b-one').onclick=function(){if(!rec)play([cur]);};
+$('b-all').onclick=function(){if(!rec)play(L.map(function(_,i){return i;}));};
+$('b-stop').onclick=function(){if(!rec)seq=null;};
+
+function pickMime(){
+  var c=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm'];
+  for(var i=0;i<c.length;i++){try{if(MediaRecorder.isTypeSupported(c[i]))return c[i];}catch(e){}}
+  return '';
+}
+function record(list,name){
+  if(rec)return;
+  if(!window.MediaRecorder||!cv.captureStream){status('متصفحك لا يدعم حفظ الفيديو من الصفحة. جرّب Chrome على الكمبيوتر.');return;}
+  var mime=pickMime(), stream=cv.captureStream(30);
+  try{rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:6000000}:{});}catch(e){status('تعذّر بدء التسجيل في هذا المتصفح.');return;}
+  chunks=[]; document.querySelectorAll('.btn').forEach(function(b){b.disabled=true;});
+  rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
+  rec.onstop=function(){
+    var type=rec.mimeType||mime||'video/webm', ext=/mp4/.test(type)?'mp4':'webm';
+    var blob=new Blob(chunks,{type:type}), url=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=url; a.download=name+'.'+ext; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){URL.revokeObjectURL(url);},60000);
+    rec=null; document.querySelectorAll('.btn').forEach(function(b){b.disabled=false;});
+    status('تم حفظ الفيديو باسم <b>'+name+'.'+ext+'</b> في مجلد التنزيلات.'+(ext==='webm'?' صيغته WebM، فإن لم يقبله واتساب حوّله إلى MP4 أو استخدم Chrome حديثًا.':''));
+  };
+  rec.start(500); play(list);
+}
+$('r-one').onclick=function(){record([cur],'makhraj-'+(cur+1));};
+$('r-all').onclick=function(){record(L.map(function(_,i){return i;}),'makharij-all');};
+
+var fontsReady=document.fonts&&document.fonts.load?Promise.all([document.fonts.load('700 80px Amiri'),document.fonts.load('600 30px "IBM Plex Sans Arabic"')]):Promise.resolve();
+requestAnimationFrame(loop);
+fontsReady.then(function(){},function(){});
+})();
+</script>
+</body>
+</html>
