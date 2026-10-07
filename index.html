@@ -26,6 +26,11 @@
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.75;direction:rtl;padding-inline:16px;padding-block:24px 56px}
 .wrap{max-width:1080px;margin-inline:auto;display:flex;flex-direction:column;gap:24px}
+header{display:flex;flex-direction:column;gap:2px}
+.theme{display:flex;gap:4px;align-self:flex-start;border:1px solid var(--line);border-radius:10px;padding:3px;background:var(--surface)}
+.theme button{font:inherit;font-size:13px;color:var(--muted);background:transparent;border:0;border-radius:7px;padding:4px 12px;cursor:pointer}
+.theme button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.theme button:focus-visible{outline:2px solid var(--air);outline-offset:2px}
 header h1{font-family:var(--f-display);font-size:clamp(34px,6vw,52px);line-height:1.2;margin:0;text-wrap:balance}
 header p{margin:6px 0 0;color:var(--muted);max-width:66ch}
 /* picker */
@@ -127,6 +132,11 @@ h2.sec{font-family:var(--f-display);font-size:30px;margin:12px 0 0}
 
 <div class="wrap">
   <header>
+    <div class="theme" id="theme" role="group" aria-label="المظهر">
+      <button type="button" data-t="light">فاتح</button>
+      <button type="button" data-t="dark">داكن</button>
+      <button type="button" data-t="auto">تلقائي</button>
+    </div>
     <h1>مخارج الحروف العربية</h1>
     <p>درس مرئي متحرك لكل حرف: أين يخرج، وكيف تتحرك أعضاء النطق خطوة بخطوة، وصفاته، وأمثلة من القرآن، والأخطاء الشائعة. اختر حرفًا، أو اترك التشغيل المتواصل يمرّ على الحروف كلها بترتيب المخارج.</p>
   </header>
@@ -210,6 +220,17 @@ h2.sec{font-family:var(--f-display);font-size:30px;margin:12px 0 0}
 </div>
 
 <script>
+(function(){
+  var root=document.documentElement, saved='light';
+  try{saved=localStorage.getItem('makharij-theme')||'light';}catch(e){}
+  function apply(t){
+    if(t==='auto')root.removeAttribute('data-theme'); else root.setAttribute('data-theme',t);
+    document.querySelectorAll('#theme button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.t===t));});
+    try{localStorage.setItem('makharij-theme',t);}catch(e){}
+  }
+  document.querySelectorAll('#theme button').forEach(function(b){b.onclick=function(){apply(b.dataset.t);};});
+  apply(saved);
+})();
 (function(){
 var SH={ // tongue: tip, seg1, seg2, root controls
  rest:[92,196,110,180,150,172,185,168,220,164,246,178,250,210,252,235,244,270],
