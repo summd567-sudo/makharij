@@ -544,19 +544,45 @@ document.addEventListener('keydown',function(e){
   if(e.target.tagName==='INPUT'||(e.target.tagName==='BUTTON'&&(e.key===' '||e.key==='Enter')))return;
   if(e.key==='ArrowLeft')go(i+1); else if(e.key==='ArrowRight')go(i-1); else if(e.key===' '){e.preventDefault();$('b-play').click();}
 });
-var arVoice=null;
-function pickVoice(){if(!window.speechSynthesis)return; var v=speechSynthesis.getVoices().filter(function(x){return /^ar/i.test(x.lang);}); if(v.length){arVoice=v[0];$('b-voice').hidden=false;}}
-if(window.speechSynthesis){pickVoice(); speechSynthesis.onvoiceschanged=pickVoice;}
-$('b-voice').onclick=function(){voice=!voice; this.textContent='تعليق صوتي: '+(voice?'يعمل':'مغلق'); if(!voice){speechSynthesis.cancel();speaking=false;} else speak();};
-function speak(){
-  if(!voice||!arVoice||!playing)return;
+// Narration through the device's own speech engine. Phones need: the first utterance started from a tap,
+// a pause after cancel() (iOS drops an immediate speak), a kept reference to the utterance (Android Chrome
+// otherwise never fires onend), and a safety timer so the player never waits forever.
+var arVoice=null, voicesSeen=false, curUtt=null, ttsGuard=null;
+function voiceLabel(){var b=$('b-voice'); b.textContent='تعليق صوتي: '+(voice?(voicesSeen&&!arVoice?'لا يوجد صوت عربي في جهازك':'يعمل'):'مغلق');}
+function pickVoice(){
+  if(!window.speechSynthesis)return;
+  var vs=speechSynthesis.getVoices(); if(vs.length)voicesSeen=true;
+  var v=vs.filter(function(x){return /^ar/i.test(x.lang);});
+  arVoice=v.filter(function(x){return /SA/i.test(x.lang);})[0]||v[0]||null;
+  voiceLabel();
+}
+if(window.speechSynthesis){
+  $('b-voice').hidden=false; pickVoice();
+  if(speechSynthesis.addEventListener)speechSynthesis.addEventListener('voiceschanged',pickVoice); else speechSynthesis.onvoiceschanged=pickVoice;
+}
+function stopTts(){clearTimeout(ttsGuard); try{if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel();}catch(e){}}
+$('b-voice').onclick=function(){voice=!voice; pickVoice(); if(!voice){stopTts();speaking=false;} else speak(true); voiceLabel();};
+function speak(fromTap){
+  if(!voice||!window.speechSynthesis||!playing)return;
   if(steps[i].audio&&window.QA&&QA.isOn())return;
-  try{ speechSynthesis.cancel(); var tmp=document.createElement('div'); tmp.innerHTML=steps[i].b;
-    var u=new SpeechSynthesisUtterance(steps[i].t+'. '+tmp.textContent); u.voice=arVoice; u.lang=arVoice.lang; u.rate=.9;
-    var me=i, ml=li; speaking=true;
-    u.onend=u.onerror=function(){if(me!==i||ml!==li)return; speaking=false; elapsed=steps[i].dur-1200;};
-    speechSynthesis.speak(u);
-  }catch(e){speaking=false;}
+  var tmp=document.createElement('div'); tmp.innerHTML=steps[i].b;
+  var text=steps[i].t+'. '+tmp.textContent, me=i, ml=li;
+  var wasBusy=speechSynthesis.speaking||speechSynthesis.pending;
+  stopTts();
+  var go=function(){
+    if(me!==i||ml!==li||!voice||!playing)return;
+    try{
+      var u=new SpeechSynthesisUtterance(text);
+      if(arVoice){u.voice=arVoice; u.lang=arVoice.lang;} else u.lang='ar-SA';
+      u.rate=.9; curUtt=u;
+      var end=function(){if(me!==i||ml!==li)return; clearTimeout(ttsGuard); speaking=false; elapsed=Math.max(elapsed,steps[i].dur-1200);};
+      u.onend=end; u.onerror=end;
+      speaking=true; ttsGuard=setTimeout(end,4000+text.length*110);
+      speechSynthesis.speak(u);
+      if(speechSynthesis.paused)speechSynthesis.resume();
+    }catch(e){speaking=false;}
+  };
+  if(fromTap&&!wasBusy)go(); else setTimeout(go,150);
 }
 function sound(){
   if(!window.QA)return;
