@@ -9,7 +9,24 @@ window.QA=(function(){
   function ref(e){return (SURA[e[1]]||('سورة '+e[1]))+': '+e[2];}
   var on=true; try{on=localStorage.getItem('makharij-sound')!=='off';}catch(x){}
   var audio=new Audio(); audio.crossOrigin='anonymous'; audio.preload='auto';
-  var token=0, queue=[], done=null, listeners=[];
+  var token=0, queue=[], done=null, listeners=[], lastUrls=[], unlocked=false, banner=null;
+  var SILENT='data:audio/wav;base64,UklGRmQGAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YUAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+  // Phones (iOS Safari especially) only allow sound that starts from a tap. Prime the players on the first tap
+  // so later scene audio can start on its own, and ignore the ringer switch where the browser allows it.
+  function prime(el){try{el.src=SILENT; var p=el.play(); if(p&&p.then)p.then(function(){if(el.src===SILENT)el.pause();},function(){});}catch(x){}}
+  function unlock(){
+    if(unlocked)return; unlocked=true;
+    try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(x){}
+    if(!api.playingUrl)prime(audio);
+  }
+  ['pointerdown','touchend','click','keydown'].forEach(function(ev){document.addEventListener(ev,unlock,{capture:true,passive:true});});
+  function showBanner(){
+    if(banner){banner.hidden=false;return;}
+    banner=document.createElement('button'); banner.type='button'; banner.textContent='اضغط هنا لتشغيل الصوت';
+    banner.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:1000;font:600 15px "IBM Plex Sans Arabic",sans-serif;padding:12px 20px;border-radius:999px;border:0;background:#0F7F6B;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer';
+    banner.onclick=function(){banner.hidden=true; unlocked=false; unlock(); play(lastUrls,null);};
+    document.body.appendChild(banner);
+  }
   function emit(){listeners.forEach(function(f){try{f(api.playingUrl);}catch(x){}});}
   function finish(my,blocked){ if(my!==token)return; var d=done; done=null; api.playingUrl=null; emit(); if(d)d(blocked); }
   function next(my){
@@ -18,12 +35,13 @@ window.QA=(function(){
     var u=queue.shift(); api.playingUrl=u; emit(); audio.src=u;
     audio.onended=function(){setTimeout(function(){next(my);},350);};
     audio.onerror=function(){next(my);};
-    var p=audio.play(); if(p&&p.catch)p.catch(function(){ queue=[]; finish(my,true); });
+    var p=audio.play(); if(p&&p.catch)p.catch(function(e){ if(my!==token)return; queue=[]; if(e&&e.name==='NotAllowedError')showBanner(); finish(my,true); });
   }
-  function play(urls,cb){stop(); token++; queue=urls.slice(); done=cb||null; next(token);}
+  function play(urls,cb){stop(); token++; lastUrls=urls.slice(); queue=urls.slice(); done=cb||null; if(banner)banner.hidden=true; next(token);}
   function stop(){token++; queue=[]; done=null; try{audio.pause();}catch(x){} if(api.playingUrl){api.playingUrl=null; emit();}}
   var api={data:DATA,wordUrl:wordUrl,ayahUrl:ayahUrl,ref:ref,play:play,stop:stop,playingUrl:null,
     onChange:function(f){listeners.push(f);},
+    prime:prime, showBanner:showBanner,
     isOn:function(){return on;},
     setOn:function(v){on=!!v; try{localStorage.setItem('makharij-sound',on?'on':'off');}catch(x){} if(!on)stop();}};
   return api;

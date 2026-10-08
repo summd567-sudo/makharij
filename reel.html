@@ -460,11 +460,19 @@ try{var m=/^#l(\d+)$/.exec(location.hash); if(m&&+m[1]<L.length)cur=+m[1];}catch
 mark();
 
 // audio
-var actx=null, dest=null;
+// One reusable player, primed inside a tap: phones block sound that does not start from a tap.
+var actx=null, dest=null, reelAu=null;
 function ensureCtx(){
-  var AC=window.AudioContext||window.webkitAudioContext; if(!AC)return null;
-  if(!actx){actx=new AC(); dest=actx.createMediaStreamDestination();}
-  if(actx.state==='suspended'){try{actx.resume();}catch(e){}}
+  if(!reelAu){reelAu=new Audio(); reelAu.crossOrigin='anonymous'; reelAu.preload='auto';}
+  var AC=window.AudioContext||window.webkitAudioContext;
+  if(AC&&!actx){
+    try{
+      actx=new AC(); dest=actx.createMediaStreamDestination();
+      var src=actx.createMediaElementSource(reelAu); src.connect(actx.destination); src.connect(dest);
+    }catch(e){actx=null; dest=null;}
+  }
+  if(actx&&actx.state==='suspended'){try{actx.resume();}catch(e){}}
+  if(window.QA&&(!seq||!seq.au||seq.auState!=='playing'))QA.prime(reelAu);
   return actx;
 }
 function soundOn(){return !!(window.QA&&QA.isOn());}
@@ -472,8 +480,8 @@ function prepAudio(s){
   if(s.au){try{s.au.pause();}catch(e){}}
   s.au=null; s.auState='none'; s.auEnd=0;
   var q=qaFirst(s.list[s.k]); if(!q||!soundOn())return;
-  var au=new Audio(); au.crossOrigin='anonymous'; au.preload='auto'; au.src=QA.wordUrl(q);
-  if(actx){try{var src=actx.createMediaElementSource(au); src.connect(actx.destination); if(dest)src.connect(dest);}catch(e){}}
+  if(!reelAu)return;
+  var au=reelAu; au.src=QA.wordUrl(q);
   au.onended=function(){s.auState='done'; s.auEnd=performance.now();};
   au.onerror=function(){s.auState='done';};
   s.au=au; s.auState='wait';
@@ -486,7 +494,7 @@ function loop(now){
   var dt=now-lastNow; lastNow=now;
   if(seq){
     var t=now-seq.t0;
-    if(seq.auState==='wait'&&t>=2400){seq.auState='playing'; var pr=seq.au.play(); if(pr&&pr.catch){var s0=seq; pr.catch(function(){s0.auState='done';});}}
+    if(seq.auState==='wait'&&t>=2400){seq.auState='playing'; var pr=seq.au.play(); if(pr&&pr.catch){var s0=seq; pr.catch(function(e){s0.auState='done'; if(e&&e.name==='NotAllowedError'&&window.QA)QA.showBanner();});}}
     if(seq.auState==='playing'&&t>4300){seq.t0+=dt; t=now-seq.t0;}
     var tailOk=seq.auState!=='playing'&&(!seq.auEnd||now-seq.auEnd>400);
     if(t>=DUR&&tailOk){seq.k++; seq.t0=now; t=0; if(seq.k>=seq.list.length){seq=null; if(rec){setTimeout(function(){rec&&rec.stop();},300);} } else prepAudio(seq);}
