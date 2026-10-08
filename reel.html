@@ -72,17 +72,19 @@ h2{font-family:var(--f-display);font-size:24px;margin:0}
         <button class="btn" id="b-one" type="button">تشغيل الحرف</button>
         <button class="btn" id="b-all" type="button">تشغيل كل الحروف</button>
         <button class="btn" id="b-stop" type="button">إيقاف</button>
+        <button class="btn" id="b-sound" type="button">الصوت: يعمل</button>
       </div>
       <div class="row">
         <button class="btn rec" id="r-one" type="button">حفظ فيديو الحرف</button>
         <button class="btn" id="r-all" type="button">حفظ فيديو كل الحروف (قرابة دقيقتين ونصف)</button>
       </div>
       <div class="status" id="status" aria-live="polite"></div>
-      <p class="note">الفيديو صامت، فأضف إليه تلاوة قارئ متقن في أي برنامج تحرير على الجوال قبل نشره. أثناء الحفظ أبقِ هذه الصفحة ظاهرة على الشاشة حتى ينتهي، وإلا توقف التسجيل. الرسم توضيحي مبسَّط وليس تصويرًا لشخص حقيقي.</p>
+      <p class="note">في كل مقطع تُتلى كلمة المثال بصوت حقيقي من تسجيلات Quran.com، ويُحفظ الصوت مع الفيديو. أثناء الحفظ أبقِ هذه الصفحة ظاهرة على الشاشة حتى ينتهي، وإلا توقف التسجيل. الرسم توضيحي مبسَّط وليس تصويرًا لشخص حقيقي.</p>
     </div>
   </div>
 </div>
 
+<script src="qa.js"></script>
 <script>
 (function(){
   var root=document.documentElement, saved='light';
@@ -311,7 +313,8 @@ function makhraj(x){
   if(x.g==='jawf')return {p:[165,175],r:150};
   return {p:x.dot,r:x.g==='halq'?62:66};
 }
-function exampleWord(x){return x.ex[0].split(' (')[0];}
+function qaFirst(i){return window.QA&&QA.data[i]&&QA.data[i][0]||null;}
+function exampleWord(x){var q=qaFirst(L.indexOf(x)); return q?q[0]:x.ex[0].split(' (')[0];}
 
 var DUR=5200;
 function drawScene(x,t,now){
@@ -431,6 +434,7 @@ function drawScene(x,t,now){
     ctx.globalAlpha=wa; var fs=68; ctx.font='700 '+fs+'px Amiri, serif'; while(ctx.measureText(word).width>CW-120&&fs>34){fs-=4;ctx.font='700 '+fs+'px Amiri, serif';}
     var ww=Math.min(CW-60,ctx.measureText(word).width+70); ctx.fillStyle='rgba(255,255,255,.88)'; roundRect(ctx,CW/2-ww/2,1052,ww,112,22); ctx.fill();
     ctx.fillStyle='#8A1F4A'; ctx.fillText(word,CW/2,1130);
+    var qf=qaFirst(L.indexOf(x)); if(qf){ctx.font='500 24px "IBM Plex Sans Arabic", sans-serif'; ctx.fillStyle='rgba(19,35,58,.6)'; ctx.fillText(QA.ref(qf),CW/2,1200);}
   }
   ctx.globalAlpha=1; ctx.font='500 22px "IBM Plex Sans Arabic", sans-serif'; ctx.fillStyle='rgba(19,35,58,.55)';
   ctx.fillText('summd567-sudo.github.io/makharij', CW/2, 1236);
@@ -455,14 +459,37 @@ function mark(){document.querySelectorAll('.key').forEach(function(b){b.setAttri
 try{var m=/^#l(\d+)$/.exec(location.hash); if(m&&+m[1]<L.length)cur=+m[1];}catch(e){}
 mark();
 
+// audio
+var actx=null, dest=null;
+function ensureCtx(){
+  var AC=window.AudioContext||window.webkitAudioContext; if(!AC)return null;
+  if(!actx){actx=new AC(); dest=actx.createMediaStreamDestination();}
+  if(actx.state==='suspended'){try{actx.resume();}catch(e){}}
+  return actx;
+}
+function soundOn(){return !!(window.QA&&QA.isOn());}
+function prepAudio(s){
+  if(s.au){try{s.au.pause();}catch(e){}}
+  s.au=null; s.auState='none'; s.auEnd=0;
+  var q=qaFirst(s.list[s.k]); if(!q||!soundOn())return;
+  var au=new Audio(); au.crossOrigin='anonymous'; au.preload='auto'; au.src=QA.wordUrl(q);
+  if(actx){try{var src=actx.createMediaElementSource(au); src.connect(actx.destination); if(dest)src.connect(dest);}catch(e){}}
+  au.onended=function(){s.auState='done'; s.auEnd=performance.now();};
+  au.onerror=function(){s.auState='done';};
+  s.au=au; s.auState='wait';
+}
 // playback
-var seq=null, rec=null, chunks=[];
-function play(list){seq={list:list,k:0,t0:performance.now()};}
+var seq=null, rec=null, chunks=[], lastNow=performance.now();
+function play(list){ensureCtx(); if(seq&&seq.au){try{seq.au.pause();}catch(e){}} seq={list:list,k:0,t0:performance.now()}; prepAudio(seq);}
 function status(h){$('status').innerHTML=h;}
 function loop(now){
+  var dt=now-lastNow; lastNow=now;
   if(seq){
     var t=now-seq.t0;
-    if(t>=DUR){seq.k++; seq.t0=now; t=0; if(seq.k>=seq.list.length){seq=null; if(rec){setTimeout(function(){rec&&rec.stop();},120);} }}
+    if(seq.auState==='wait'&&t>=2400){seq.auState='playing'; var pr=seq.au.play(); if(pr&&pr.catch){var s0=seq; pr.catch(function(){s0.auState='done';});}}
+    if(seq.auState==='playing'&&t>4300){seq.t0+=dt; t=now-seq.t0;}
+    var tailOk=seq.auState!=='playing'&&(!seq.auEnd||now-seq.auEnd>400);
+    if(t>=DUR&&tailOk){seq.k++; seq.t0=now; t=0; if(seq.k>=seq.list.length){seq=null; if(rec){setTimeout(function(){rec&&rec.stop();},300);} } else prepAudio(seq);}
     if(seq){cur=seq.list[seq.k]; mark(); drawScene(L[cur],t,now); if(rec)status('<b>جارٍ التسجيل</b>: '+L[cur].n+' ('+(seq.k+1)+' من '+seq.list.length+')');}
     else drawScene(L[cur],2900,now);
   } else drawScene(L[cur],2900,now);
@@ -470,17 +497,22 @@ function loop(now){
 }
 $('b-one').onclick=function(){if(!rec)play([cur]);};
 $('b-all').onclick=function(){if(!rec)play(L.map(function(_,i){return i;}));};
-$('b-stop').onclick=function(){if(!rec)seq=null;};
+$('b-stop').onclick=function(){if(!rec){if(seq&&seq.au){try{seq.au.pause();}catch(e){}} seq=null;}};
+var sbtn=$('b-sound'); function sLabel(){sbtn.textContent='الصوت: '+(soundOn()?'يعمل':'مغلق');}
+if(window.QA){sLabel(); sbtn.onclick=function(){if(rec)return; QA.setOn(!QA.isOn()); sLabel(); if(!QA.isOn()&&seq&&seq.au){try{seq.au.pause();}catch(e){} seq.auState='done';}};} else sbtn.hidden=true;
 
 function pickMime(){
-  var c=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm'];
+  var c=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];
   for(var i=0;i<c.length;i++){try{if(MediaRecorder.isTypeSupported(c[i]))return c[i];}catch(e){}}
   return '';
 }
 function record(list,name){
   if(rec)return;
   if(!window.MediaRecorder||!cv.captureStream){status('متصفحك لا يدعم حفظ الفيديو من الصفحة. جرّب Chrome على الكمبيوتر.');return;}
-  var mime=pickMime(), stream=cv.captureStream(30);
+  ensureCtx();
+  var mime=pickMime(), vs=cv.captureStream(30), tracks=vs.getVideoTracks();
+  if(dest&&soundOn())tracks=tracks.concat(dest.stream.getAudioTracks());
+  var stream=new MediaStream(tracks);
   try{rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:6000000}:{});}catch(e){status('تعذّر بدء التسجيل في هذا المتصفح.');return;}
   chunks=[]; document.querySelectorAll('.btn').forEach(function(b){b.disabled=true;});
   rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};

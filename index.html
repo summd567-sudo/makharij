@@ -41,7 +41,14 @@ header p{margin:6px 0 0;color:var(--muted);max-width:66ch}
 .key{font-family:var(--f-display);font-size:24px;line-height:1;min-width:46px;height:46px;padding:0 8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;cursor:pointer}
 .key:hover{border-color:var(--ink)}
 .key[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
-.key:focus-visible,.controls button:focus-visible,.seg:focus-visible{outline:2px solid var(--air);outline-offset:2px}
+.key:focus-visible,.controls button:focus-visible,.seg:focus-visible,.play:focus-visible{outline:2px solid var(--air);outline-offset:2px}
+.ex{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap}
+.ex .ayah{font-size:28px}
+.ex .ref{font-size:13px;color:var(--muted)}
+.play{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:3px 12px;cursor:pointer}
+.play:hover{border-color:var(--ink)}
+.play.now{background:var(--air);border-color:var(--air);color:var(--surface)}
+.src{font-size:12px;color:var(--muted);margin:4px 0 0}
 /* player */
 .screen{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .stage{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);min-height:420px}
@@ -209,6 +216,7 @@ h2.sec{font-family:var(--f-display);font-size:30px;margin:12px 0 0}
       <div class="bar" id="bar"></div>
       <span class="counter" id="counter"></span>
       <label for="auto"><input type="checkbox" id="auto" checked> انتقل للحرف التالي تلقائيًا</label>
+      <button id="b-sound" type="button">الصوت: يعمل</button>
       <button id="b-voice" type="button" hidden>تعليق صوتي: مغلق</button>
     </div>
     <div class="note">الرسم توضيحي مبسَّط وليس مقياسًا تشريحيًا. التعليق الصوتي (إن ظهر زره) صوت آلي من جهازك يقرأ الشرح فقط، ولا يصلح مرجعًا لنطق الحروف. خذ النطق بالتلقي من قارئ متقن.</div>
@@ -220,6 +228,7 @@ h2.sec{font-family:var(--f-display);font-size:30px;margin:12px 0 0}
   <div class="tbl"><table id="overview"><thead><tr><th>الحرف</th><th>المخرج</th><th>الصفات</th></tr></thead><tbody></tbody></table></div>
 </div>
 
+<script src="qa.js"></script>
 <script>
 (function(){
   var root=document.documentElement, saved='light';
@@ -426,13 +435,20 @@ function soundScenes(x){
   if(has(x,T)) return [{t:'بين الشدة والرخاوة',b:'<p class="txt">'+(x.nas?'ينحبس الصوت في الفم عند المخرج، ويجري من الخيشوم جريانًا ناقصًا، والأوتار تهتز.':'يجري الصوت جريانًا ناقصًا: لا ينحبس كله ولا يجري كله، والأوتار تهتز.')+'</p>'+extra,s:{air:x.nas?'nose':'flow',voice:1}}];
   return [{t:'جريان الصوت',b:'<p class="txt">'+(j?'يجري الصوت لضعف الاعتماد على المخرج (الرخاوة)، والنَّفَس محبوس والأوتار تهتز (الجهر).':'يجري الصوت والنَّفَس معًا (الرخاوة والهمس)، فيُسمع احتكاك واضح عند المخرج.')+'</p>'+extra,s:{air:'flow',voice:j}}];
 }
+function qaFor(x){return window.QA?(QA.data[L.indexOf(x)]||[]):[];}
+function exRows(x){
+  var q=qaFor(x);
+  if(!q.length)return x.ex.map(function(e){return '<div class="ayah">'+e+'</div>';}).join('');
+  return q.map(function(e){return '<div class="ex"><button type="button" class="play" data-u="'+QA.wordUrl(e)+'">▶ الكلمة</button><span class="ayah">'+e[0]+'</span><span class="ref">'+QA.ref(e)+'</span><button type="button" class="play" data-u="'+QA.ayahUrl(e)+'">▶ الآية بصوت الحصري</button></div>';}).join('')+
+    '<p class="src">صوت الكلمة من Quran.com، والآية كاملة بصوت الشيخ محمود خليل الحصري (المصحف المعلّم) من EveryAyah.com.</p>';
+}
 function scenes(x){
   var S=[];
   S.push({t:'مخرج '+x.n,b:'<p class="txt">'+x.mk+'</p>',s:{}});
   S.push({t:'وضع أعضاء النطق',b:ul(x.how,'ol'),s:{raise:has(x,U)}});
   S.push.apply(S,soundScenes(x));
   S.push({t:'صفات '+x.n,b:chips(x)+ul(x.sf.filter(function(s){return BASE.indexOf(s)<0;}).map(function(s){return '<b>'+s+':</b> '+MEAN[s];})),s:{raise:has(x,U)}});
-  S.push({t:'أمثلة من القرآن',b:x.ex.map(function(e){return '<div class="ayah">'+e+'</div>';}).join(''),s:{}});
+  var qa=qaFor(x); S.push({t:'أمثلة من القرآن',b:exRows(x),s:{},audio:qa.length?qa.map(QA.wordUrl):null});
   S.push({t:'تنبيهات وأخطاء شائعة',b:ul(x.err),s:{}});
   S.forEach(function(s){s.dur=8000+Math.min(7000,s.b.replace(/<[^>]+>/g,'').length*35);});
   return S;
@@ -496,14 +512,14 @@ function render(){
   $('air-flow').classList.toggle('on',st.air==='flow'); $('air-block').classList.toggle('on',st.air==='block'); $('air-nose').classList.toggle('on',st.air==='nose');
   $('folds').classList.toggle('on',!!st.voice); $('burst').classList.toggle('on',!!st.burst); $('raise').classList.toggle('on',!!st.raise);
   $('counter').textContent=(li+1)+' / '+L.length;
-  elapsed=0; speak();
+  elapsed=0; speaking=false; speak(); sound();
 }
 function card(x){
   $('card').innerHTML='<div class="head"><b>'+x.k+'</b><span>'+x.n+'</span></div>'+
     '<section><h3>المخرج</h3><p>'+x.mk+'</p></section>'+
     '<section><h3>كيفية النطق</h3>'+ul(x.how,'ol')+'</section>'+
     '<section><h3>الصفات</h3>'+chips(x)+'<div class="tbl" style="margin-top:8px"><table>'+x.sf.map(function(s){return '<tr><td><b>'+s+'</b></td><td>'+MEAN[s]+'</td></tr>';}).join('')+'</table></div></section>'+
-    '<section><h3>أمثلة من القرآن</h3>'+ul(x.ex.map(function(e){return '<span class="q">'+e+'</span>';}))+'<h3 style="margin-top:14px">تنبيهات وأخطاء شائعة</h3>'+ul(x.err)+'</section>';
+    '<section><h3>أمثلة من القرآن</h3>'+(qaFor(x).length?exRows(x)+'<h3 style="margin-top:14px;font-size:18px">أمثلة أخرى</h3>':'')+ul(x.ex.map(function(e){return '<span class="q">'+e+'</span>';}))+'<h3 style="margin-top:14px">تنبيهات وأخطاء شائعة</h3>'+ul(x.err)+'</section>';
 }
 function go(n){
   if(n>=steps.length){ if(li<L.length-1){load(li+1);} else {playing=false; elapsed=steps[i].dur; updBtn();} return; }
@@ -519,7 +535,7 @@ function tick(now){
 function updBtn(){$('b-play').textContent=playing?'إيقاف':'تشغيل';}
 $('b-play').onclick=function(){
   if(!playing&&i===steps.length-1&&elapsed>=steps[i].dur){playing=true;load(li);}
-  else{playing=!playing; if(!playing&&window.speechSynthesis){speechSynthesis.cancel();speaking=false;} else speak();}
+  else{playing=!playing; if(!playing){if(window.speechSynthesis)speechSynthesis.cancel(); if(window.QA)QA.stop(); speaking=false;} else {speak(); sound();}}
   updBtn();
 };
 $('b-prev').onclick=function(){go(i-1);};
@@ -534,6 +550,7 @@ if(window.speechSynthesis){pickVoice(); speechSynthesis.onvoiceschanged=pickVoic
 $('b-voice').onclick=function(){voice=!voice; this.textContent='تعليق صوتي: '+(voice?'يعمل':'مغلق'); if(!voice){speechSynthesis.cancel();speaking=false;} else speak();};
 function speak(){
   if(!voice||!arVoice||!playing)return;
+  if(steps[i].audio&&window.QA&&QA.isOn())return;
   try{ speechSynthesis.cancel(); var tmp=document.createElement('div'); tmp.innerHTML=steps[i].b;
     var u=new SpeechSynthesisUtterance(steps[i].t+'. '+tmp.textContent); u.voice=arVoice; u.lang=arVoice.lang; u.rate=.9;
     var me=i, ml=li; speaking=true;
@@ -541,6 +558,19 @@ function speak(){
     speechSynthesis.speak(u);
   }catch(e){speaking=false;}
 }
+function sound(){
+  if(!window.QA)return;
+  QA.stop();
+  var s=steps[i]; if(!s.audio||!QA.isOn()||!playing)return;
+  var me=i, ml=li; speaking=true;
+  QA.play(s.audio,function(){ if(me!==i||ml!==li)return; speaking=false; elapsed=Math.max(elapsed,steps[i].dur-1500); });
+}
+if(window.QA){
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.play'); if(!b)return; speaking=false; QA.play([b.dataset.u]);});
+  QA.onChange(function(u){document.querySelectorAll('.play').forEach(function(b){b.classList.toggle('now',!!u&&b.dataset.u===u);});});
+  var sb=$('b-sound'); var sl=function(){sb.textContent='الصوت: '+(QA.isOn()?'يعمل':'مغلق');}; sl();
+  sb.onclick=function(){QA.setOn(!QA.isOn()); sl(); speaking=false; if(QA.isOn())sound();};
+} else $('b-sound').hidden=true;
 var start=0; try{var m=/^#l(\d+)$/.exec(location.hash); if(m&&+m[1]<L.length)start=+m[1];}catch(e){}
 load(start); requestAnimationFrame(tick);
 })();
